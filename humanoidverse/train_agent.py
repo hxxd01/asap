@@ -19,6 +19,7 @@ from utils.config_utils import *  # noqa: E402, F403
 
 @hydra.main(config_path="config", config_name="base", version_base="1.1")
 def main(config: OmegaConf):
+    print("------config-------:", config)
     # import ipdb; ipdb.set_trace()
     simulator_type = config.simulator['_target_'].split('.')[-1]
     # import ipdb; ipdb.set_trace()
@@ -119,7 +120,15 @@ def main(config: OmegaConf):
 
     algo: BaseAlgo = instantiate(device=device, env=env, config=config.algo, log_dir=experiment_save_dir)
     algo.setup()
-    # import ipdb;    ipdb.set_trace()
+    
+    # 加载初始策略检查点
+    '''if hasattr(config.algo, 'initial_policy_checkpoint') and config.algo.initial_policy_checkpoint is not None:
+        initial_checkpoint_path = Path(config.algo.initial_policy_checkpoint)
+        if initial_checkpoint_path.exists():
+            logger.info(f"Loading initial training policy from {initial_checkpoint_path}")
+            algo.load(initial_checkpoint_path)'''
+    
+    # 加载训练过程中的检查点
     if config.checkpoint is not None:
         algo.load(config.checkpoint)
 

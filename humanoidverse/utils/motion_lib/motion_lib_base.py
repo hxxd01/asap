@@ -101,6 +101,7 @@ class MotionLibBase():
         self._sampling_prob = torch.ones(self._num_unique_motions).to(self._device) / self._num_unique_motions  # For use in sampling batches
 
     def get_motion_actions(self, motion_ids, motion_times):
+
         motion_len = self._motion_lengths[motion_ids]
         num_frames = self._motion_num_frames[motion_ids]
         dt = self._motion_dt[motion_ids]
@@ -108,8 +109,10 @@ class MotionLibBase():
         frame_idx0, frame_idx1, blend = self._calc_frame_blend(motion_times, motion_len, num_frames, dt)
         f0l = frame_idx0 + self.length_starts[motion_ids]
         f1l = frame_idx1 + self.length_starts[motion_ids]
-
+        #logger.info(f"motion_times {motion_times} ")
+        #logger.info(f"f0l {f0l} ")
         action = self._motion_actions[f0l]
+  
         return action
 
     def get_motion_state(self, motion_ids, motion_times, offset=None):

@@ -1,0 +1,76 @@
+
+保存轨迹：
+python humanoidverse/eval_agent.py \
++checkpoint=/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_19900.pt \
++simulator=isaacgym \
++env.config.ckpt_dir=/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof \
++env.config.termination.terminate_when_motion_far=False \
++env.config.termination.terminate_by_gravity=False \
++env.config.save_motion=True \
++env.config.save_total_steps=100 \
++env.config.save_note="gym" \
++headless=True \
+env.config.termination.terminate_when_motion_far=False \
+env.config.termination.terminate_by_gravity=False
+
+
+
+
+
+python humanoidverse/train_agent.py \
++simulator=isaacgym \
++exp=motion_tracking \
++domain_rand=NO_domain_rand \
++rewards=motion_tracking/reward_motion_tracking_dm_2real \
++robot=g1/g1_29dof_anneal_23dof \
++terrain=terrain_locomotion_plane \
++obs=motion_tracking/deepmimic_a2c_nolinvel_LARGEnoise_history \  # obs的config文件
++policy_checkpoint="/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_19900.pt" \
+num_envs=2048 \
+project_name=MotionTracking \
+experiment_name=MotionTracking_CR7 \
+robot.motion.motion_file="/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/eval_save_.pkl" \
+rewards.reward_penalty_curriculum=True \
+rewards.reward_penalty_degree=0.00001 \
+env.config.resample_motion_when_training=False \
+env.config.termination.terminate_when_motion_far=True \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
+env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
+robot.asset.self_collisions=0
+
+
+"humanoidverse/data/motions/g1_29dof_anneal_23dof/TairanTestbed/singles/0-TairanTestbed_TairanTestbed_CR7_video_CR7_level1_filter_amass.pkl"
+
+# "/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/eval_save_.pkl"
+
+/home/harry/Desktop/ASAP (1)/humanoidverse/config/rewards/motion_tracking/reward_motion_tracking_dm_2real.yaml
+
+/home/harry/Desktop/ASAP (1)/humanoidverse/config/rewards/motion_tracking/delta_action_rewards.yaml
+
+
+/home/harry/Desktop/ASAP (1)/humanoidverse/config/obs/motion_tracking/deepmimic_a2c_nolinvel_LARGEnoise_history.yaml
+
+delta_action_obs.yaml
+
+
+python humanoidverse/train_agent.py \
++simulator=isaacgym \
++exp=motion_tracking \
++domain_rand=NO_domain_rand \
++rewards=motion_tracking/reward_motion_tracking_dm_2real \
++robot=g1/g1_29dof_anneal_23dof \
++terrain=terrain_locomotion_plane \
++obs=motion_tracking/delta_action_obs \
+num_envs=4096 \
+project_name=MotionTracking \
+experiment_name=MotionTracking_CR7 \
+robot.motion.motion_file="/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/eval_save_.pkl" \
+rewards.reward_penalty_curriculum=True \
+rewards.reward_penalty_degree=0.00001 \
+env.config.resample_motion_when_training=False \
+env.config.termination.terminate_when_motion_far=True \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
+env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
+robot.asset.self_collisions=0

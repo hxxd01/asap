@@ -6,7 +6,7 @@ from humanoidverse.utils.torch_utils import to_torch, torch_rand_float
 import numpy as np
 from humanoidverse.simulator.base_simulator.base_simulator import BaseSimulator
 # from humanoidverse.simulator.isaaclab_cfg import IsaacLabCfg
-from omni.isaac.lab.sim import SimulationContext
+from isaaclab.sim import SimulationContext
 from omni.isaac.lab.sim import PhysxCfg, SimulationCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.scene import InteractiveScene

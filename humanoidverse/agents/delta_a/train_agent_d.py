@@ -32,75 +32,58 @@ from humanoidverse.utils.helpers import pre_process_config
 from humanoidverse.agents.base_algo.base_algo import BaseAlgo
 from hydra.utils import instantiate
 
-
-class PPODeltaA(PPO):
+# 固定delta action 模型，训练策略
+class PPODeltaD(PPO):
     def __init__(self,
                  env: BaseTask,
                  config,
                  log_dir=None,
                  device='cpu'):
         super().__init__(env, config, log_dir, device)
-      
-        # 从命令行参数中获取policy_checkpoint
-        # overrides = hydra.core.hydra_config.HydraConfig.get().overrides.task
-        # policy_checkpoint = None
-        # for override in overrides:
-        #     if override.startswith('LL+policy_checkpoint='):
-        #         policy_checkpoint = override.split('=', 1)[1].strip('"')
-        #         break
-                
-        # if policy_checkpoint is not None:
-        #     config.policy_checkpoint = policy_checkpoint
-            
-        if config.policy_checkpoint is not None:
+        self.policy_checkpoint = config.policy_checkpoint if hasattr(config, 'policy_checkpoint') else None
+        if self.policy_checkpoint is not None:
             has_config = True
-            checkpoint = Path(config.policy_checkpoint)
-            
+            checkpoint = Path(self.policy_checkpoint)
             config_path = checkpoint.parent / "config.yaml"
             if not config_path.exists():
                 config_path = checkpoint.parent.parent / "config.yaml"
                 if not config_path.exists():
                     has_config = False
                     logger.error(f"Could not find config path: {config_path}")
-
+            
             if has_config:
                 logger.info(f"Loading training config file from {config_path}")
                 with open(config_path) as file:
                     policy_config = OmegaConf.load(file)
-
+    
                 if policy_config.eval_overrides is not None:
                     policy_config = OmegaConf.merge(
                         policy_config, policy_config.eval_overrides
                     )
-
-               
-                policy_config.algo.config.policy_checkpoint = str(checkpoint)
-                logger.info(f"Using checkpoint: {checkpoint}")
-
+    
                 pre_process_config(policy_config)
-
-                # 直接使用PPO类创建loaded_policy
-                self.loaded_policy = PPO(env=env, config=policy_config.algo.config, device=device, log_dir=None)
+    
+                self.loaded_policy: BaseAlgo = instantiate(policy_config.algo, env=self.env, device=self.device, log_dir=None)
                 self.loaded_policy.algo_obs_dim_dict = policy_config.env.config.robot.algo_obs_dim_dict
                 self.loaded_policy.setup()
-                self.loaded_policy.load(str(checkpoint))  
+                self.loaded_policy.load(self.policy_checkpoint)
                 self.loaded_policy._eval_mode()
                 self.loaded_policy.eval_policy = self.loaded_policy._get_inference_policy()
-
+    
                 # 设置环境的loaded_policy
                 if isinstance(self.env, LeggedRobotMotionTracking):
                     self.env.loaded_policy = self.loaded_policy
-
+    
                 for name, param in self.loaded_policy.actor.actor_module.module.named_parameters():
                     param.requires_grad = False
-                    
-                # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
-                # if not hasattr(env, 'loaded_extra_policy'):
-                #     setattr(env, 'loaded_extra_policy', self.loaded_policy)
-                # if not hasattr(env.loaded_extra_policy, 'eval_policy'):
-                #     setattr(env.loaded_extra_policy, 'eval_policy', self.loaded_policy._get_inference_policy())
 
-                # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
+        # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
+        # if not hasattr(env, 'loaded_extra_policy'):
+        #     setattr(env, 'loaded_extra_policy', self.loaded_policy)
+        # if not hasattr(env.loaded_extra_policy, 'eval_policy'):
+        #     setattr(env.loaded_extra_policy, 'eval_policy', self.loaded_policy._get_inference_policy())
+
+        # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
 
     # def _actor_act_step(self, obs_dict):
     #     actions = self.actor.act(obs_dict["actor_obs"])
@@ -111,19 +94,23 @@ class PPODeltaA(PPO):
             for i in range(self.num_steps_per_env):
                 # Compute the actions and values
                 # actions = self.actor.act(obs_dict["actor_obs"]).detach()
-                pkl_actions = self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
-                # 使用loaded policy生成动作作为ref_actions
-                with torch.inference_mode():
-                    ref_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
-                    obs_dict['actor_obs'] = torch.cat([
-                        obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
-                        pkl_actions  # 这里到底是pkl_actions还是ref_actions???
-                    ], dim=1)
+
 
                 policy_state_dict = {}
-                policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict) # 当前策略推理
+                policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict)  # 当前策略推理
                 values = self._critic_eval_step(obs_dict).detach()
                 policy_state_dict["values"] = values
+                actions=policy_state_dict["actions"] #当前策略的actions
+                # 残差模型推理
+                with torch.inference_mode():
+
+                    obs_dict['closed_loop_actor_obs'] = torch.cat([
+                        obs_dict['closed_loop_actor_obs'][:, :-self.env.dim_actions],
+                        actions # 用当前策略的actions构建残差模型的输入
+                    ], dim=1)
+                    delta_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
+                    
+
 
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
@@ -131,20 +118,16 @@ class PPODeltaA(PPO):
 
                 for obs_ in policy_state_dict.keys():
                     self.storage.update_key(obs_, policy_state_dict[obs_])
-                delta_actions = policy_state_dict["actions"]     # delta action
-                
-                # 获取pkl文件中的动作并相加(真实动作)
-                
-                #final_actions = pkl_actions +delta_actions
-                final_actions = pkl_actions 
+
+
+                final_actions = actions+delta_actions
+
                 
                 actor_state = {
                     "actions": final_actions,  # 使用相加后的动作
-
                 }
 
                 obs_dict, rewards, dones, infos = self.env.step(actor_state)
-
                 # critic_obs = privileged_obs if privileged_obs is not None else obs
                 for obs_key in obs_dict.keys():
                     obs_dict[obs_key] = obs_dict[obs_key].to(self.device)
@@ -201,4 +184,3 @@ class PPODeltaA(PPO):
             actor_state = c.on_pre_eval_env_step(actor_state)
         return actor_state
 
-    

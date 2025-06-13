@@ -235,7 +235,7 @@ class PPO(BaseAlgo):
             for i in range(self.num_steps_per_env):
                 # Compute the actions and values
                 # actions = self.actor.act(obs_dict["actor_obs"]).detach()
-
+                
                 policy_state_dict = {}
                 policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict)
                 values = self._critic_eval_step(obs_dict).detach()
@@ -250,6 +250,7 @@ class PPO(BaseAlgo):
                 actions = policy_state_dict["actions"]
                 actor_state = {}
                 actor_state["actions"] = actions
+
                 obs_dict, rewards, dones, infos = self.env.step(actor_state)
                 # critic_obs = privileged_obs if privileged_obs is not None else obs
                 for obs_key in obs_dict.keys():

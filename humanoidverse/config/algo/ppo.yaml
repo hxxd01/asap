@@ -1,7 +1,9 @@
 # @package _global_
 
 algo:
+  #_target_: humanoidverse.agents.delta_a.train_delta_a.PPODeltaA
   _target_: humanoidverse.agents.ppo.ppo.PPO
+  #_target_: humanoidverse.agents.delta_a.train_agent_d.PPODeltaD
   _recursive_: False
   config:
     num_learning_epochs: 5
@@ -17,7 +19,7 @@ algo:
     use_clipped_value_loss: True
     schedule: "adaptive"
     desired_kl: 0.01
-
+    
     num_steps_per_env: 24
     save_interval: 100
 
@@ -45,3 +47,5 @@ algo:
           type: MLP
           hidden_dims: [512, 256, 128]
           activation: ELU
+
+

@@ -1,0 +1,37 @@
+# @package _global_
+
+defaults:
+  - /algo: ppo
+  - /env: delta_action_env # Use the new delta action environment
+  - /obs: delta_action_obs # Use the new delta action observation
+  - /rewards: delta_action_rewards # Use the new delta action rewards
+  - /robot: g1/g1_29dof_anneal_23dof # From README
+  - /terrain: terrain_locomotion_plane # From README
+  - /simulator: isaacgym # Assuming Isaac Gym for delta action training
+
+experiment_name: DeltaActionTraining
+project_name: ASAP_DeltaAction
+log_task_name: delta_action
+
+algo:
+  policy:
+    actor_hidden_dims: [512, 256, 128]
+    critic_hidden_dims: [512, 256, 128]
+
+  ppo:
+    num_mini_batches: 4
+    num_learning_epochs: 5
+    clip_param: 0.2
+    gamma: 0.99
+    lam: 0.95
+    value_loss_coef: 1.0
+    entropy_coef: 0.0
+    desired_kl: 0.01
+    max_grad_norm: 1.0
+    learning_rate: 1.0e-4
+    schedule: fixed
+    decay_rate: 0.1
+    decay_steps: 100000000
+
+  max_iterations: 10000 # Example, adjust as needed
+  save_interval: 1000 # Example, adjust as needed 

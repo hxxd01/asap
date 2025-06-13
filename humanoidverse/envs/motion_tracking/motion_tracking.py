@@ -24,6 +24,7 @@ from loguru import logger
 
 from scipy.spatial.transform import Rotation as sRot
 import joblib
+from humanoidverse.utils.helpers import parse_observation
 
 class LeggedRobotMotionTracking(LeggedRobotBase):
     def __init__(self, config, device):
@@ -34,7 +35,8 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         self._init_motion_lib()
         self._init_motion_extend()
         self._init_tracking_config()
-
+        self._ref_actions = None  # 初始化参考动作缓冲区
+        self.loaded_policy = None  # 添加loaded_policy属性
         self.init_done = True
         self.debug_viz = True
 
@@ -56,14 +58,11 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             self.terminate_when_motion_far_threshold = self.config.termination_scales.termination_motion_far_threshold
             logger.info(f"Terminate when motion far threshold: {self.terminate_when_motion_far_threshold}")
 
-
-
-        
-
     def teleop_callback(self, msg):
         self.teleop_marker_coords = torch.tensor(msg.data, device=self.device)
 
     def _init_save_motion(self):
+        logger.info("Initializing motion tracking ...")
         if "save_motion" in self.config:
             self.save_motion = self.config.save_motion
             if self.save_motion:
@@ -210,7 +209,7 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
     def _resample_motion_times(self, env_ids):
         if len(env_ids) == 0:
             return
-        self.motion_len[env_ids] = self._motion_lib.get_motion_length(self.motion_ids[env_ids])
+        self.motion_len[env_ids] = self._motion_lib.get_motion_length(self.motion_ids[env_ids]) # motion 总长度
         if self.is_evaluating and not self.config.enforce_randomize_motion_start_eval:
             self.motion_start_times[env_ids] = torch.zeros(len(env_ids), dtype=torch.float32, device=self.device)
         else:
@@ -227,14 +226,18 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
 
 
     def _pre_compute_observations_callback(self):
+        """在计算观察值之前的回调函数"""
         super()._pre_compute_observations_callback()
         
         offset = self.env_origins
         B = self.motion_ids.shape[0]
-        motion_times = (self.episode_length_buf + 1) * self.dt + self.motion_start_times # next frames so +1
-        # motion_res = self._get_state_from_motionlib_cache_trimesh(self.motion_ids, motion_times, offset= offset)
-        motion_res = self._motion_lib.get_motion_state(self.motion_ids, motion_times, offset=offset)
-
+        self._motion_times = (self.episode_length_buf + 1) * self.dt + self.motion_start_times
+        motion_res = self._motion_lib.get_motion_state(self.motion_ids, self._motion_times, offset=offset)
+        
+        # 修改ref_actions的构建逻辑
+        if hasattr(self, 'loaded_policy') and self.loaded_policy is not None and hasattr(self.loaded_policy, 'eval_policy'):
+    
+            self._ref_actions = torch.zeros((self.num_envs, self.dim_actions), device=self.device)
         ref_body_pos_extend = motion_res["rg_pos_t"]
         self.ref_body_pos_extend[:] = ref_body_pos_extend # for visualization and analysis
         ref_body_vel_extend = motion_res["body_vel_t"] # [num_envs, num_markers, 3]
@@ -334,7 +337,7 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         #################### Deepmimic phase ###################### 
 
         self._ref_motion_length = self._motion_lib.get_motion_length(self.motion_ids)
-        self._ref_motion_phase = motion_times / self._ref_motion_length
+        self._ref_motion_phase = self._motion_times / self._ref_motion_length
         if not (torch.all(self._ref_motion_phase >= 0) and torch.all(self._ref_motion_phase <= 1.05)): # hard coded 1.05 because +1 will exceed 1
             max_phase = self._ref_motion_phase.max()
             # import ipdb; ipdb.set_trace()
@@ -481,9 +484,13 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
 
     def _post_physics_step(self):
         super()._post_physics_step()
-        
+
         if self.save_motion:    
             motion_times = (self.episode_length_buf) * self.dt + self.motion_start_times
+
+            # DEBUG PRINTS
+            logger.info(f"DEBUG: Current steps collected (len(dof)): {len(self.motions_for_saving['dof'])}")
+            logger.info(f"DEBUG: Configured save_total_steps: {self.config.save_total_steps}")
 
             if (len(self.motions_for_saving['dof'])) > self.config.save_total_steps:
                 for k, v in self.motions_for_saving.items():
@@ -547,7 +554,6 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         return self._obs_local_ref_rigid_body_pos
     
     def _get_obs_ref_motion_phase(self):
-        # print(self._ref_motion_phase)
         return self._ref_motion_phase
     
     def _get_obs_vr_3point_pos(self):
@@ -644,3 +650,39 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             self.simulator.add_visualize_entities(num_visualize_markers)
         else:
             pass
+
+    def _get_obs_base_pos(self):
+        """获取机器人基础位置作为观察值"""
+        return self.simulator.robot_root_states[:, 0:3]
+
+    def _get_obs_base_rot(self):
+        """获取机器人基础旋转作为观察值（四元数）"""
+        return self.simulator.robot_root_states[:, 3:7]
+
+    def _get_obs_ref_actions(self):
+        """获取参考动作作为观察值"""
+        if not hasattr(self, '_ref_actions') or self._ref_actions is None:
+            print("Warning: _ref_actions not initialized, initializing with zeros")
+            self._ref_actions = torch.zeros((self.num_envs, self.dim_actions), device=self.device)
+        return self._ref_actions
+
+    def _compute_observations(self):
+        """ Computes observations """
+        self.obs_buf_dict_raw = {}
+        self.hist_obs_dict = {}
+        
+        if self.add_noise_currculum:
+            noise_extra_scale = self.current_noise_curriculum_value
+        else:
+            noise_extra_scale = 1.
+        
+        # compute Algo observations
+        for obs_key, obs_config in self.config.obs.obs_dict.items():
+            self.obs_buf_dict_raw[obs_key] = dict()
+            parse_observation(self, obs_config, self.obs_buf_dict_raw[obs_key], self.config.obs.obs_scales, self.config.obs.noise_scales, noise_extra_scale)
+        
+        # Compute history observations
+        history_obs_list = self.history_handler.history.keys()
+        parse_observation(self, history_obs_list, self.hist_obs_dict, self.config.obs.obs_scales, self.config.obs.noise_scales, noise_extra_scale)
+        
+        self._post_config_observation_callback()

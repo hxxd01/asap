@@ -17,7 +17,7 @@ from humanoidverse.utils.config_utils import *  # noqa: E402, F403
 from loguru import logger
 
 import threading
-# from pynput import keyboard
+
 
 def on_press(key, env):
     try:
@@ -52,6 +52,7 @@ def listen_for_keypress(env):
 
 @hydra.main(config_path="config", config_name="base_eval")
 def main(override_config: OmegaConf):
+    print("------config-------:", override_config)
     # logging to hydra log file
     hydra_log_path = os.path.join(HydraConfig.get().runtime.output_dir, "eval.log")
     logger.remove()

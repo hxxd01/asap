@@ -8,30 +8,30 @@ rewards:
   set_reward_date: 20241025
   only_positive_rewards: False
   reward_scales:
-      teleop_body_position_extend: 1.0
-      teleop_vr_3point: 1.6
-      teleop_body_position_feet: 2.1
-      teleop_body_rotation_extend: 0.5
-      teleop_body_ang_velocity_extend: 0.5
-      teleop_body_velocity_extend: 0.5
-      teleop_joint_position: 0.75
-      teleop_joint_velocity: 0.5
+      teleop_body_position_extend: 1.0  # Body position
+      teleop_vr_3point: 1.0  # VR 3-point
+      teleop_body_position_feet: 1.0  # Body position (feet)
+      teleop_body_rotation_extend: 0.5  # Body rotation
+      teleop_body_ang_velocity_extend: 0.5 # Body angular velocity
+      teleop_body_velocity_extend: 0.5  # Body velocity
+      teleop_joint_position: 0.5  # DoF position
+      teleop_joint_velocity: 0.5  # DoF velocity
       penalty_torques: -0.000001
       # penalty_dof_vel: -0.0001
       # penalty_dof_acc: -2.5e-8
-      penalty_action_rate: -0.5 # need to be tuned up to -0.5 for real robot
+      penalty_action_rate: -0.01 # need to be tuned up to -0.5 for real robot ，Action rate
       # penalty_feet_contact_forces: -0.01
       # penalty_stumble: -10.0
-
+      action_norm: -0.2
       # better for landing
-      penalty_feet_ori: -2.0
-      feet_heading_alignment: -0.1
-      penalty_slippage: -1.0
+      #penalty_feet_ori: -2.0  # Feet orientation
+      #feet_heading_alignment: -0.1  # feet_heading
+      #penalty_slippage: -1.0    #  penalty_slippage
 
-      limits_dof_pos: -10.0
-      limits_dof_vel: -5.0
-      limits_torque: -5.0
-      termination: -200.0
+      limits_dof_pos: -10.0  #  DoF position limits
+      limits_dof_vel: -5.0  #  DoF velocity limits
+      limits_torque: -0.1  #  Torque limits
+      termination: -200.0   #  Termination
       # feet_max_height_for_this_air: -100.0
 
 

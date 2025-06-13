@@ -193,6 +193,7 @@ class LeggedRobotBase(BaseTask):
         self.is_evaluating = True
     
     def step(self, actor_state):
+        
         """ Apply actions, simulate, call self.post_physics_step()
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
@@ -202,7 +203,7 @@ class LeggedRobotBase(BaseTask):
         self._pre_physics_step(actions)
         self._physics_step()
         self._post_physics_step()
-
+   
         # if self.episode_length_buf[0] == 1:
         #     import ipdb; ipdb.set_trace()
 
@@ -544,8 +545,14 @@ class LeggedRobotBase(BaseTask):
         
         for obs_key, obs_config in self.config.obs.obs_dict.items():
             obs_keys = sorted(obs_config)
-            # print("obs_keys", obs_keys)            
-            self.obs_buf_dict[obs_key] = torch.cat([self.obs_buf_dict_raw[obs_key][key] for key in obs_keys], dim=-1)
+            # 确保所有张量都在同一个设备上
+            tensors_to_cat = []
+            for key in obs_keys:
+                tensor = self.obs_buf_dict_raw[obs_key][key]
+                if tensor.device != self.device:
+                    tensor = tensor.to(self.device)
+                tensors_to_cat.append(tensor)
+            self.obs_buf_dict[obs_key] = torch.cat(tensors_to_cat, dim=-1)
     
     def _compute_torques(self, actions):
         """ Compute torques from actions.
@@ -691,7 +698,11 @@ class LeggedRobotBase(BaseTask):
     
     def _reward_penalty_action_rate(self):
         # Penalize changes in actions
-        return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+        return torch.sum(torch.square(self.actions - self.last_actions), dim=1)
+
+    def _reward_action_norm(self):
+        # Penalize large action magnitudes according to exp(-(||a_t||) - 1)
+        return torch.exp(-torch.norm(self.actions, dim=-1) - 1.0)
 
     def _reward_penalty_orientation(self):
         # Penalize non flat base orientation

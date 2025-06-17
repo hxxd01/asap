@@ -653,11 +653,20 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
 
     def _get_obs_base_pos(self):
         """获取机器人基础位置作为观察值"""
+
         return self.simulator.robot_root_states[:, 0:3]
 
     def _get_obs_base_rot(self):
         """获取机器人基础旋转作为观察值（四元数）"""
-        return self.simulator.robot_root_states[:, 3:7]
+      
+        if self.config.simulator.config.name == "isaacgym":
+            return self.simulator.robot_root_states[:, 3:7]  # IsaacGym直接是xyzw格式
+        elif self.config.simulator.config.name == "isaacsim":
+            return self.simulator.robot_root_states[:, [4, 5, 6, 3]]  # IsaacSim是wxyz，需要转换为xyzw
+        elif self.config.simulator.config.name == "genesis":
+            return self.simulator.robot_root_states[:, 3:7]  # Genesis直接是xyzw格式
+        else:
+            raise NotImplementedError
 
     def _get_obs_ref_actions(self):
         """获取参考动作作为观察值"""
@@ -665,12 +674,26 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             print("Warning: _ref_actions not initialized, initializing with zeros")
             self._ref_actions = torch.zeros((self.num_envs, self.dim_actions), device=self.device)
         return self._ref_actions
+    #分析一下各个观测的数值范围,好设置scale系数
+    def print_obs(self):
+        obs_dict = {
+            "base_pos": self.simulator.robot_root_states[:, 0:3],
+            "base_rot": self.simulator.robot_root_states[:, 3:7],
+            "base_lin_vel": self.simulator.robot_root_states[:, 7:10],
+            "base_ang_vel": self.simulator.robot_root_states[:, 10:13],
+            "dof_pos": self.simulator.dof_pos,
+            "dof_vel": self.simulator.dof_vel,
 
+        }
+        # 只在前10步或每1000步打印一次
+        if self.common_step_counter < 10 or self.common_step_counter % 1000 == 0:
+            for k, v in obs_dict.items():
+                print(f"{k}: min={v.min().item():.4f}, max={v.max().item():.4f}, mean={v.mean().item():.4f}, shape={v.shape}")
     def _compute_observations(self):
         """ Computes observations """
         self.obs_buf_dict_raw = {}
         self.hist_obs_dict = {}
-        
+        #self.print_obs()
         if self.add_noise_currculum:
             noise_extra_scale = self.current_noise_curriculum_value
         else:

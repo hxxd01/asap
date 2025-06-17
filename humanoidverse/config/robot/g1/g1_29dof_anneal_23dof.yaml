@@ -5,9 +5,9 @@ defaults:
 
 robot:
   # Observation parameters
-  num_bodies: 24
-  dof_obs_size: 23
-  actions_dim: 23
+  num_bodies: 24  #机器人有24个刚体（如躯干、大腿、小腿、手臂等）
+  dof_obs_size: 23  #23个可控关节（自由度）
+  actions_dim: 23  
   lower_body_actions_dim: 15 # Yuanhang
   upper_body_actions_dim: 8 # Yuanhang
   policy_obs_dim: -1 # Jiawei
@@ -32,7 +32,13 @@ robot:
               'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint', 'right_knee_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint',
               'waist_yaw_joint', 'waist_roll_joint', 'waist_pitch_joint',
               'left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_elbow_joint', 
-              'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_elbow_joint']
+              'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_elbow_joint'] #23个关节的名字
+  #dof_names: ['左髋俯仰关节', '左髋滚转关节', '左髋偏航关节', '左膝关节', '左踝俯仰关节', '左踝滚转关节',
+  #'右髋俯仰关节', '右髋滚转关节', '右髋偏航关节', '右膝关节', '右踝俯仰关节', '右踝滚转关节',
+  #'腰部偏航关节', '腰部滚转关节', '腰部俯仰关节',
+  #'左肩俯仰关节', '左肩滚转关节', '左肩偏航关节', '左肘关节',
+  #'右肩俯仰关节', '右肩滚转关节', '右肩偏航关节', '右肘关节'
+  #]
   upper_dof_names: ['left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_elbow_joint',
                     'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_elbow_joint']
   upper_left_arm_dof_names: ['left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_elbow_joint']
@@ -160,7 +166,7 @@ robot:
     action_scale: 0.25
     action_clip_value: 100.0
     clip_torques: True
-
+  #机器人资产（URDF、USD、XML等文件）相关的参数
   asset:
     collapse_fixed_joints: True # merge bodies connected by fixed joints. Specific fixed joints can be kept by adding " <... dont_collapse="true">
     replace_cylinder_with_capsule: True
@@ -182,7 +188,7 @@ robot:
     default_dof_drive_mode: 3
 
     fix_base_link: False # TEST: fix base link to world
-
+ #运动数据和运动库相关的参数
   motion:
     motion_file : 'humanoidverse/data/motions/g1_29dof_anneal_23dof/v1/amass_all.pkl'
     # motion_file : 'humanoidverse/data/motions/g1_29dof/v1/singles/0-ACCAD_Male2General_c3d_A6- Box lift_poses.pkl'

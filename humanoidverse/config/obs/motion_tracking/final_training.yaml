@@ -13,17 +13,18 @@ obs:
       history_actor  # 历史观测
     ]
     closed_loop_actor_obs: [
-      base_rot, # 3d位置 3维
-
-      base_lin_vel,  # 基座线速度 3维
-      base_pos, # 基座四元数方向  4维
+    
+      base_rot, # 基座四元数方向  4维 
+      base_lin_vel,  # 基座线速度 3维   
+      #base_pos, #  3d位置 3维  x,y,z [m]
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23
-      ref_actions  # 动作 23
+      ref_actions  # 当前动作 23
       # dif_local_rigid_body_pos,
       # local_ref_rigid_body_pos,
       # history,
+      
     ]
     critic_obs: [
       base_lin_vel,
@@ -59,8 +60,8 @@ obs:
     }
   # 这里论文没有给出base_rot和 base_pos的缩放系数，默认设置为1
   obs_scales: {
-    base_rot: 1.0,
-    base_pos: 1.0,
+    base_rot: 6.0,
+    base_pos: 0.05,
     base_lin_vel: 2.0,
     base_ang_vel: 0.25,
     projected_gravity: 1.0,

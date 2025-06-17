@@ -121,7 +121,7 @@ class Genesis(BaseSimulator):
         asset_root = self.robot_cfg.asset.asset_root
         asset_file = self.robot_cfg.asset.urdf_file
         asset_path = os.path.join(asset_root, asset_file)
-
+        #在这个地方读取
         self.robot = self.scene.add_entity(
             gs.morphs.URDF(
                 file=asset_path,

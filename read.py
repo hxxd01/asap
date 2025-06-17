@@ -77,5 +77,5 @@ def main_analyze(pkl_path):
         print(f"加载文件失败: {e}")
 
 if __name__ == "__main__":
-    pkl_file_to_analyze = "/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/gym2ge500 5700pt_.pkl"
+    pkl_file_to_analyze = "your_motion_file_split.pkl"
     main_analyze(pkl_file_to_analyze)

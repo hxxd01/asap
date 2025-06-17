@@ -32,7 +32,7 @@ from humanoidverse.utils.helpers import pre_process_config
 from humanoidverse.agents.base_algo.base_algo import BaseAlgo
 from hydra.utils import instantiate
 
-
+#训练delta action模型，policy_checkpoint是预训练模型。
 class PPODeltaA(PPO):
     def __init__(self,
                  env: BaseTask,
@@ -106,45 +106,51 @@ class PPODeltaA(PPO):
     #     actions = self.actor.act(obs_dict["actor_obs"])
     #     return self.actor.act_inference(obs_dict["actor_obs"])
 
+    
+
     def _rollout_step(self, obs_dict):
         with torch.inference_mode():
             for i in range(self.num_steps_per_env):
-                # Compute the actions and values
-                # actions = self.actor.act(obs_dict["actor_obs"]).detach()
-                pkl_actions = self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
                 # 使用loaded policy生成动作作为ref_actions
+                pkl_actions=self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
                 with torch.inference_mode():
+
                     ref_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
                     obs_dict['actor_obs'] = torch.cat([
                         obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
-                        pkl_actions  # 这里到底是pkl_actions还是ref_actions???
+                        pkl_actions  # 这里到底是pkl_actions还是ref_actions?
                     ], dim=1)
 
+
                 policy_state_dict = {}
-                policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict) # 当前策略推理
+                policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict)
+                delta_actions = policy_state_dict["actions"]
                 values = self._critic_eval_step(obs_dict).detach()
                 policy_state_dict["values"] = values
-
+                final_actions = delta_actions + pkl_actions  # 直接计算最终动作
+                #final_actions = pkl_actions
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
                     self.storage.update_key(obs_key, obs_dict[obs_key])
 
                 for obs_ in policy_state_dict.keys():
                     self.storage.update_key(obs_, policy_state_dict[obs_])
-                delta_actions = policy_state_dict["actions"]     # delta action
                 
-                # 获取pkl文件中的动作并相加(真实动作)
+                     # delta action
                 
-                #final_actions = pkl_actions +delta_actions
-                final_actions = pkl_actions 
+                
+                
+         
+                '''print(f"Step {self.common_step_counter} - pkl_actions (mean): {pkl_actions.mean().item():.4f}, std: {pkl_actions.std().item():.4f}")
+                print(f"Step {self.common_step_counter} - delta_actions (mean): {delta_actions.mean().item():.4f}, std: {delta_actions.std().item():.4f}")
+                print(f"Step {self.common_step_counter} - final_actions (mean): {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}")
+                print(f"Step {self.common_step_counter} - obs_dict['closed_loop_actor_obs'] (mean): {obs_dict['closed_loop_actor_obs'].mean().item():.4f}, std: {obs_dict['closed_loop_actor_obs'].std().item():.4f}")'''
                 
                 actor_state = {
-                    "actions": final_actions,  # 使用相加后的动作
-
+                    "actions": final_actions,  # 使用最终动作
                 }
 
                 obs_dict, rewards, dones, infos = self.env.step(actor_state)
-
                 # critic_obs = privileged_obs if privileged_obs is not None else obs
                 for obs_key in obs_dict.keys():
                     obs_dict[obs_key] = obs_dict[obs_key].to(self.device)
@@ -200,5 +206,7 @@ class PPODeltaA(PPO):
         for c in self.eval_callbacks:
             actor_state = c.on_pre_eval_env_step(actor_state)
         return actor_state
+
+   
 
     

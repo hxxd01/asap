@@ -32,7 +32,7 @@ from humanoidverse.utils.helpers import pre_process_config
 from humanoidverse.agents.base_algo.base_algo import BaseAlgo
 from hydra.utils import instantiate
 
-# 固定delta action 模型，训练策略
+# 固定delta action 模型，训练策略，policy_checkpoint是残差模型。
 class PPODeltaD(PPO):
     def __init__(self,
                  env: BaseTask,

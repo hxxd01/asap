@@ -242,6 +242,11 @@ class LeggedRobotBase(BaseTask):
         self._update_counters_each_step()
         self.last_episode_length_buf = self.episode_length_buf.clone()
 
+        # 添加打印语句来输出当前 episode step 长度
+        '''if self.common_step_counter % 10 == 0: # 每100步打印一次，避免日志过于频繁
+            avg_episode_len = self.episode_length_buf.float().mean().item()
+            logger.info(f"Current episode step (avg): {avg_episode_len:.2f}")'''
+
         self._pre_compute_observations_callback()
         self._update_tasks_callback()
         # compute observations, rewards, resets, ...
@@ -327,9 +332,12 @@ class LeggedRobotBase(BaseTask):
             self.reset_buf |= torch.any(torch.norm(self.simulator.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
 
         if self.config.termination.terminate_by_gravity:
-            # print(self.projected_gravity)
+
             self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 0:1]) > self.config.termination_scales.termination_gravity_x, dim=1)
             self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 1:2]) > self.config.termination_scales.termination_gravity_y, dim=1)
+
+
+
         if self.config.termination.terminate_by_low_height:
             # import ipdb; ipdb.set_trace()
             self.reset_buf |= torch.any(self.simulator.robot_root_states[:, 2:3] < self.config.termination_scales.termination_min_base_height, dim=1)
@@ -356,6 +364,7 @@ class LeggedRobotBase(BaseTask):
             
             if torch.rand(1) < self.config.termination_probality.terminate_when_close_to_torque_limit:
                 self.reset_buf |= out_of_torque_limits > 0.
+
 
 
     def _update_timeout_buf(self):
@@ -882,6 +891,7 @@ class LeggedRobotBase(BaseTask):
         return self.base_lin_vel
     
     def _get_obs_base_ang_vel(self,):
+
         return self.base_ang_vel
     
     def _get_obs_projected_gravity(self,):

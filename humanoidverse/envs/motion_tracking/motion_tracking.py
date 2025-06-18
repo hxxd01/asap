@@ -58,6 +58,10 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             self.terminate_when_motion_far_threshold = self.config.termination_scales.termination_motion_far_threshold
             logger.info(f"Terminate when motion far threshold: {self.terminate_when_motion_far_threshold}")
 
+        # Custom normalization parameters for base_pos
+        self._base_pos_norm_mean = torch.tensor([17.0, 17.0, 0.7], device=self.device, dtype=torch.float32)
+        #self._base_pos_norm_scale = torch.tensor([0.270, 0.267, 1], device=self.device, dtype=torch.float32)
+
     def teleop_callback(self, msg):
         self.teleop_marker_coords = torch.tensor(msg.data, device=self.device)
 
@@ -345,6 +349,10 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         # print(f"ref_motion_phase: {self._ref_motion_phase[0].item():.2f}")
         # print(f"ref_motion_length: {self._ref_motion_length[0].item():.2f}")
         
+        # 添加打印语句来检查运动时间和长度
+        '''if self.common_step_counter % 10 == 0: # 每10步打印一次
+            logger.info(f"Motion Times: {self._motion_times[0].item():.2f}, Ref Motion Length: {self._ref_motion_length[0].item():.2f}")'''
+
         self._log_motion_tracking_info()
 
     def _compute_reward(self):
@@ -652,13 +660,14 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             pass
 
     def _get_obs_base_pos(self):
-        """获取机器人基础位置作为观察值"""
-
-        return self.simulator.robot_root_states[:, 0:3]
+        """获取机器人基础位置作为观察值，并进行归一化"""
+        raw_pos = self.simulator.robot_root_states[:, 0:3]
+        #normalized_pos = (raw_pos - self._base_pos_norm_mean) * self._base_pos_norm_scale
+        normalized_pos = (raw_pos - self._base_pos_norm_mean)
+        return normalized_pos
 
     def _get_obs_base_rot(self):
         """获取机器人基础旋转作为观察值（四元数）"""
-      
         if self.config.simulator.config.name == "isaacgym":
             return self.simulator.robot_root_states[:, 3:7]  # IsaacGym直接是xyzw格式
         elif self.config.simulator.config.name == "isaacsim":
@@ -674,26 +683,12 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             print("Warning: _ref_actions not initialized, initializing with zeros")
             self._ref_actions = torch.zeros((self.num_envs, self.dim_actions), device=self.device)
         return self._ref_actions
-    #分析一下各个观测的数值范围,好设置scale系数
-    def print_obs(self):
-        obs_dict = {
-            "base_pos": self.simulator.robot_root_states[:, 0:3],
-            "base_rot": self.simulator.robot_root_states[:, 3:7],
-            "base_lin_vel": self.simulator.robot_root_states[:, 7:10],
-            "base_ang_vel": self.simulator.robot_root_states[:, 10:13],
-            "dof_pos": self.simulator.dof_pos,
-            "dof_vel": self.simulator.dof_vel,
 
-        }
-        # 只在前10步或每1000步打印一次
-        if self.common_step_counter < 10 or self.common_step_counter % 1000 == 0:
-            for k, v in obs_dict.items():
-                print(f"{k}: min={v.min().item():.4f}, max={v.max().item():.4f}, mean={v.mean().item():.4f}, shape={v.shape}")
     def _compute_observations(self):
         """ Computes observations """
         self.obs_buf_dict_raw = {}
         self.hist_obs_dict = {}
-        #self.print_obs()
+      
         if self.add_noise_currculum:
             noise_extra_scale = self.current_noise_curriculum_value
         else:

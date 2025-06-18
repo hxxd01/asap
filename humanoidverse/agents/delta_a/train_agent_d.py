@@ -102,13 +102,13 @@ class PPODeltaD(PPO):
                 policy_state_dict["values"] = values
                 actions=policy_state_dict["actions"] #当前策略的actions
                 # 残差模型推理
-                with torch.inference_mode():
 
-                    obs_dict['closed_loop_actor_obs'] = torch.cat([
-                        obs_dict['closed_loop_actor_obs'][:, :-self.env.dim_actions],
-                        actions # 用当前策略的actions构建残差模型的输入
-                    ], dim=1)
-                    delta_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
+
+                obs_dict['closed_loop_actor_obs'] = torch.cat([
+                    obs_dict['closed_loop_actor_obs'][:, :-self.env.dim_actions],
+                    actions # 用当前策略的actions构建残差模型的输入
+                ], dim=1)
+                delta_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
                     
 
 

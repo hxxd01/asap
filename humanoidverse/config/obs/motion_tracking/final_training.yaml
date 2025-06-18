@@ -13,10 +13,10 @@ obs:
       history_actor  # 历史观测
     ]
     closed_loop_actor_obs: [
-    
+
       base_rot, # 基座四元数方向  4维 
       base_lin_vel,  # 基座线速度 3维   
-      #base_pos, #  3d位置 3维  x,y,z [m]
+      base_pos, #  3d位置 3维  x,y,z [m]
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23

@@ -40,6 +40,15 @@ class PPODeltaA(PPO):
                  log_dir=None,
                  device='cpu'):
         super().__init__(env, config, log_dir, device)
+        # 统计数据缓冲区
+        self._pos_stats_buffer = []
+        self._pos_min_buffer = [] # 记录最小值
+        self._pos_max_buffer = [] # 记录最大值
+        self._lin_vel_stats_buffer = [] # 新增：线性速度统计
+        self._lin_vel_min_buffer = [] # 新增：线性速度最小值
+        self._lin_vel_max_buffer = [] # 新增：线性速度最大值
+        self.stats_collection_interval = 10000 # 默认每10000步打印一次统计数据
+        self.stats_collection_counter = 0
       
         # 从命令行参数中获取policy_checkpoint
         # overrides = hydra.core.hydra_config.HydraConfig.get().overrides.task
@@ -113,13 +122,17 @@ class PPODeltaA(PPO):
             for i in range(self.num_steps_per_env):
                 # 使用loaded policy生成动作作为ref_actions
                 pkl_actions=self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
-                with torch.inference_mode():
 
-                    ref_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
-                    obs_dict['actor_obs'] = torch.cat([
-                        obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
-                        pkl_actions  # 这里到底是pkl_actions还是ref_actions?
-                    ], dim=1)
+
+                ref_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
+                obs_dict['actor_obs'] = torch.cat([
+                    obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
+                    pkl_actions  # 这里到底是pkl_actions还是ref_actions?
+                ], dim=1)
+                obs_dict['critic_obs'] = torch.cat([
+                    obs_dict['critic_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
+                    pkl_actions
+                ], dim=1)
 
 
                 policy_state_dict = {}
@@ -127,8 +140,8 @@ class PPODeltaA(PPO):
                 delta_actions = policy_state_dict["actions"]
                 values = self._critic_eval_step(obs_dict).detach()
                 policy_state_dict["values"] = values
-                final_actions = delta_actions + pkl_actions  # 直接计算最终动作
-                #final_actions = pkl_actions
+                #final_actions = delta_actions + pkl_actions  # 直接计算最终动作
+                final_actions = pkl_actions + delta_actions
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
                     self.storage.update_key(obs_key, obs_dict[obs_key])

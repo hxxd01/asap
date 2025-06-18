@@ -31,7 +31,7 @@ rewards:
       limits_dof_pos: -10.0  #  DoF position limits
       limits_dof_vel: -5.0  #  DoF velocity limits
       limits_torque: -0.1  #  Torque limits
-      termination: -200.0   #  Termination
+      termination: -200   #  Termination
       # feet_max_height_for_this_air: -100.0
 
 
@@ -62,7 +62,7 @@ rewards:
   reward_min_penalty_scale: 0.0
   reward_max_penalty_scale: 1.0
   reward_penalty_level_down_threshold: 40
-  reward_penalty_level_up_threshold: 42 # shortest motion in TairanTestbed is 92, therefore 46 is the middle point, we set 42 here for curriculum learning level up
+  reward_penalty_level_up_threshold: 42 # TairanTestbed中最短的运动是92步，因此46是中间点，我们在这里设置为42用于课程学习升级
   reward_penalty_degree: 0.000003 # 0.00001
   num_compute_average_epl: 10000
 

@@ -2,7 +2,7 @@ import joblib
 import numpy as np
 
 # 1. 读取原始pkl
-data = joblib.load('/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/g2g430 19900pt_.pkl')
+data = joblib.load('/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/g2g800 nog19900pt1_.pkl')
 motion = data['motion0']
 
 # 2. 取出terminate信号
@@ -35,5 +35,5 @@ split_data = {}
 for i, ep in enumerate(episodes[1:-1]):#跳过第0段和最后一段
     split_data[f'motion{i}'] = ep
 
-joblib.dump(split_data, 'your_motion_file_split.pkl')
+joblib.dump(split_data, 'g800.pkl')
 print("已保存为 your_motion_file_split.pkl")

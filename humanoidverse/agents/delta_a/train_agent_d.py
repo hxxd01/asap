@@ -120,8 +120,8 @@ class PPODeltaD(PPO):
                     self.storage.update_key(obs_, policy_state_dict[obs_])
 
 
-                final_actions = actions+delta_actions
-
+                #final_actions = actions+delta_actions
+                final_actions = actions +delta_actions
                 
                 actor_state = {
                     "actions": final_actions,  # 使用相加后的动作

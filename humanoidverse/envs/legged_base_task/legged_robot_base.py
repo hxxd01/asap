@@ -2,13 +2,14 @@ from time import time
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import logging
 
 from humanoidverse.utils.torch_utils import *
 # from isaacgym import gymtorch, gymapi, gymutil
 
 import torch
 from torch import Tensor
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 
 from humanoidverse.envs.env_utils.general import class_to_dict
 from isaac_utils.rotations import get_euler_xyz_in_tensor
@@ -22,6 +23,9 @@ from humanoidverse.envs.env_utils.visualization import Point
 
 from loguru import logger
 import copy
+
+# 设置logger
+logger = logging.getLogger(__name__)
 
 class LeggedRobotBase(BaseTask):
     def __init__(self, config, device):
@@ -52,6 +56,7 @@ class LeggedRobotBase(BaseTask):
         self.actions = torch.zeros(self.num_envs, self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions_after_delay = torch.zeros(self.num_envs, self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_actions = torch.zeros(self.num_envs, self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.delta_actions = torch.zeros(self.num_envs, self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_dof_pos = torch.zeros_like(self.simulator.dof_pos)
         self.last_dof_vel = torch.zeros_like(self.simulator.dof_vel)
         self.last_root_vel = torch.zeros_like(self.simulator.robot_root_states[:, 7:13])
@@ -199,6 +204,9 @@ class LeggedRobotBase(BaseTask):
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
         actions = actor_state["actions"]
+        if "delta_actions" in actor_state:
+            self.delta_actions = actor_state["delta_actions"]
+        #print(self.delta_actions)
         # actions *= 0.0
         self._pre_physics_step(actions)
         self._physics_step()
@@ -213,6 +221,8 @@ class LeggedRobotBase(BaseTask):
         clip_action_limit = self.config.robot.control.action_clip_value
         self.actions = torch.clip(actions, -clip_action_limit, clip_action_limit).to(self.device)
 
+     
+
         self.log_dict["action_clip_frac"] = (
                 self.actions.abs() == clip_action_limit
             ).sum() / self.actions.numel()
@@ -223,6 +233,7 @@ class LeggedRobotBase(BaseTask):
             self.actions_after_delay = self.action_queue[torch.arange(self.num_envs), self.action_delay_idx].clone()
         else:
             self.actions_after_delay = self.actions.clone()
+
 
 
     def _physics_step(self):
@@ -329,18 +340,18 @@ class LeggedRobotBase(BaseTask):
 
     def _update_reset_buf(self):
         if self.config.termination.terminate_by_contact:
-            self.reset_buf |= torch.any(torch.norm(self.simulator.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
+            contact_termination = torch.any(torch.norm(self.simulator.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
+            self.reset_buf |= contact_termination
 
         if self.config.termination.terminate_by_gravity:
-
-            self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 0:1]) > self.config.termination_scales.termination_gravity_x, dim=1)
-            self.reset_buf |= torch.any(torch.abs(self.projected_gravity[:, 1:2]) > self.config.termination_scales.termination_gravity_y, dim=1)
-
-
+            gravity_x_termination = torch.any(torch.abs(self.projected_gravity[:, 0:1]) > self.config.termination_scales.termination_gravity_x, dim=1)
+            gravity_y_termination = torch.any(torch.abs(self.projected_gravity[:, 1:2]) > self.config.termination_scales.termination_gravity_y, dim=1)
+            gravity_termination = gravity_x_termination | gravity_y_termination
+            self.reset_buf |= gravity_termination
 
         if self.config.termination.terminate_by_low_height:
-            # import ipdb; ipdb.set_trace()
-            self.reset_buf |= torch.any(self.simulator.robot_root_states[:, 2:3] < self.config.termination_scales.termination_min_base_height, dim=1)
+            low_height_termination = torch.any(self.simulator.robot_root_states[:, 2:3] < self.config.termination_scales.termination_min_base_height, dim=1)
+            self.reset_buf |= low_height_termination
 
         if self.config.termination.terminate_when_close_to_dof_pos_limit:
             out_of_dof_pos_limits = -(self.simulator.dof_pos - self.simulator.dof_pos_limits_termination[:, 0]).clip(max=0.) # lower limit
@@ -349,26 +360,35 @@ class LeggedRobotBase(BaseTask):
             out_of_dof_pos_limits = torch.sum(out_of_dof_pos_limits, dim=1)
             # get random number between 0 and 1, if it is smaller than self.config.termination_probality.terminate_when_close_to_dof_pos_limit, apply the termination
             if torch.rand(1) < self.config.termination_probality.terminate_when_close_to_dof_pos_limit:
-                self.reset_buf |= out_of_dof_pos_limits > 0.
+                dof_pos_limit_termination = out_of_dof_pos_limits > 0.
+                self.reset_buf |= dof_pos_limit_termination
         
         if self.config.termination.terminate_when_close_to_dof_vel_limit:
             out_of_dof_vel_limits = torch.sum((torch.abs(self.simulator.dof_vel) - self.dof_vel_limits * self.config.termination_scales.termination_close_to_dof_vel_limit).clip(min=0., max=1.), dim=1)
             
-            
-
             if torch.rand(1) < self.config.termination_probality.terminate_when_close_to_dof_vel_limit:
-                self.reset_buf |= out_of_dof_vel_limits > 0.
+                dof_vel_limit_termination = out_of_dof_vel_limits > 0.
+                self.reset_buf |= dof_vel_limit_termination
         
         if self.config.termination.terminate_when_close_to_torque_limit:
             out_of_torque_limits = torch.sum((torch.abs(self.torques) - self.torque_limits * self.config.termination_scales.termination_close_to_torque_limit).clip(min=0., max=1.), dim=1)
             
             if torch.rand(1) < self.config.termination_probality.terminate_when_close_to_torque_limit:
-                self.reset_buf |= out_of_torque_limits > 0.
+                torque_limit_termination = out_of_torque_limits > 0.
+                self.reset_buf |= torque_limit_termination
 
-
+        # 记录termination原因
+        '''if self.reset_buf.sum().item() > 0:
+            logger.info(f"[Termination] Step {self.common_step_counter}: {self.reset_buf.sum().item()} envs terminated")'''
 
     def _update_timeout_buf(self):
         self.time_out_buf |= self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
+        # 添加调试信息
+        '''if hasattr(self, '_motion_lib') and hasattr(self, 'motion_ids'):
+            motion_length = self._motion_lib.get_motion_length(self.motion_ids)
+            logger.info(f"[Debug] 动作序列长度: {motion_length[0].item():.3f}秒")
+            logger.info(f"[Debug] 对应步数: {motion_length[0].item() / self.dt:.0f}步")'''
+        
 
     def reset_envs_idx(self, env_ids, target_states=None, target_buf=None):
         """ Reset some environments.
@@ -711,7 +731,7 @@ class LeggedRobotBase(BaseTask):
 
     def _reward_action_norm(self):
         # Penalize large action magnitudes according to exp(-(||a_t||) - 1)
-        return torch.exp(-torch.norm(self.actions, dim=-1) - 1.0)
+        return torch.exp(torch.norm(self.delta_actions, dim=-1) - 1.0)
 
     def _reward_penalty_orientation(self):
         # Penalize non flat base orientation
@@ -888,6 +908,7 @@ class LeggedRobotBase(BaseTask):
           
     
     def _get_obs_base_lin_vel(self,):
+       
         return self.base_lin_vel
     
     def _get_obs_base_ang_vel(self,):

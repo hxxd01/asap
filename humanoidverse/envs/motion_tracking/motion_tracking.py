@@ -192,15 +192,37 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         if self.config.termination.terminate_when_motion_far:
             reset_buf_motion_far = torch.any(torch.norm(self.dif_global_body_pos, dim=-1) > self.terminate_when_motion_far_threshold, dim=-1)
             self.reset_buf |= reset_buf_motion_far
+            # 记录motion_far termination
+            '''if reset_buf_motion_far.sum().item() > 0:
+                logger.info(f"[Motion Far] Step {self.common_step_counter}: {reset_buf_motion_far.sum().item()} envs, threshold: {self.terminate_when_motion_far_threshold:.3f}")
             # log current motion far threshold
             if self.config.termination_curriculum.terminate_when_motion_far_curriculum:
-                self.log_dict["terminate_when_motion_far_threshold"] = torch.tensor(self.terminate_when_motion_far_threshold, dtype=torch.float)
+                self.log_dict["terminate_when_motion_far_threshold"] = torch.tensor(self.terminate_when_motion_far_threshold, dtype=torch.float)'''
 
     def _update_timeout_buf(self):
         super()._update_timeout_buf()
         if self.config.termination.terminate_when_motion_end:
             current_time = (self.episode_length_buf) * self.dt + self.motion_start_times
-            self.time_out_buf |= current_time > self.motion_len
+            motion_end_termination = current_time > self.motion_len
+            self.time_out_buf |= motion_end_termination
+            # 记录motion_end termination
+            if motion_end_termination.sum().item() > 0:
+                # 获取被终止的环境的step长度
+                terminated_env_ids = torch.where(motion_end_termination)[0]
+                terminated_steps = self.episode_length_buf[terminated_env_ids]
+                terminated_motion_len = self.motion_len[terminated_env_ids]
+                terminated_current_time = current_time[terminated_env_ids]
+                terminated_start_times = self.motion_start_times[terminated_env_ids]
+                
+                avg_steps = terminated_steps.float().mean().item()
+                max_steps = terminated_steps.max().item()
+                min_steps = terminated_steps.min().item()
+                avg_motion_len = terminated_motion_len.float().mean().item()
+                avg_current_time = terminated_current_time.float().mean().item()
+                avg_start_time = terminated_start_times.float().mean().item()
+                
+                '''logger.info(f"[Motion End] Step {self.common_step_counter}: {motion_end_termination.sum().item()} envs, avg_steps: {avg_steps:.1f}, min: {min_steps}, max: {max_steps}")
+                logger.info(f"[Motion End Debug] avg_motion_len: {avg_motion_len:.2f}s, avg_current_time: {avg_current_time:.2f}s, avg_start_time: {avg_start_time:.2f}s, dt: {self.dt:.3f}s")'''
 
     def next_task(self):
         # This function is only called when evaluating
@@ -677,7 +699,7 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         else:
             raise NotImplementedError
 
-    def _get_obs_ref_actions(self):
+    def _get_obs_z_actions(self):
         """获取参考动作作为观察值"""
         if not hasattr(self, '_ref_actions') or self._ref_actions is None:
             print("Warning: _ref_actions not initialized, initializing with zeros")

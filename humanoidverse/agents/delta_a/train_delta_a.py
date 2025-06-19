@@ -115,7 +115,31 @@ class PPODeltaA(PPO):
     #     actions = self.actor.act(obs_dict["actor_obs"])
     #     return self.actor.act_inference(obs_dict["actor_obs"])
 
-    
+    '''def _actor_rollout_step(self, obs_dict, policy_state_dict):
+        # 获取pkl_actions
+        pkl_actions=self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
+        obs_dict['actor_obs'] = torch.cat([
+            obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
+            pkl_actions  # 这里到底是pkl_actions还是ref_actions?
+        ], dim=1)
+        # 策略网络输出delta_actions
+        delta_actions = self._actor_act_step(obs_dict)
+
+        actions = pkl_actions + delta_actions
+        policy_state_dict["actions"] = actions
+        action_mean = self.actor.action_mean.detach()
+        action_sigma = self.actor.action_std.detach()
+        actions_log_prob = self.actor.get_actions_log_prob(actions).detach().unsqueeze(1)
+        policy_state_dict["action_mean"] = action_mean
+        policy_state_dict["action_sigma"] = action_sigma
+        policy_state_dict["actions_log_prob"] = actions_log_prob
+
+        assert len(actions.shape) == 2
+        assert len(actions_log_prob.shape) == 2
+        assert len(action_mean.shape) == 2
+        assert len(action_sigma.shape) == 2
+
+        return policy_state_dict'''
 
     def _rollout_step(self, obs_dict):
         with torch.inference_mode():
@@ -125,23 +149,34 @@ class PPODeltaA(PPO):
 
 
                 ref_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
+                last_actor_slice = obs_dict['actor_obs'][:, -self.env.dim_actions:]
+                if not torch.allclose(last_actor_slice, torch.zeros_like(last_actor_slice)):
+                    print("Warning: 观测错误")
+
+                # 检查critic_obs最后一段
+                last_critic_slice = obs_dict['critic_obs'][:, -self.env.dim_actions:]
+                if not torch.allclose(last_critic_slice, torch.zeros_like(last_critic_slice)):
+                    print("Warning: 观测错误")
                 obs_dict['actor_obs'] = torch.cat([
                     obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
                     pkl_actions  # 这里到底是pkl_actions还是ref_actions?
                 ], dim=1)
+                
                 obs_dict['critic_obs'] = torch.cat([
                     obs_dict['critic_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
                     pkl_actions
                 ], dim=1)
-
-
+                
+                
+             
                 policy_state_dict = {}
                 policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict)
                 delta_actions = policy_state_dict["actions"]
                 values = self._critic_eval_step(obs_dict).detach()
                 policy_state_dict["values"] = values
                 #final_actions = delta_actions + pkl_actions  # 直接计算最终动作
-                final_actions = pkl_actions + delta_actions
+                final_actions =  delta_actions +pkl_actions
+                #final_actions =  pkl_actions
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
                     self.storage.update_key(obs_key, obs_dict[obs_key])
@@ -150,17 +185,36 @@ class PPODeltaA(PPO):
                     self.storage.update_key(obs_, policy_state_dict[obs_])
                 
                      # delta action
-                
-                
+
+                '''if i % 10 == 0:
+                    base_ang_vel = obs_dict['actor_obs'][:, 0:3]
+                    projected_gravity = obs_dict['actor_obs'][:, 3:6]
+                    dof_pos = obs_dict['actor_obs'][:, 6:29]
+                    dof_vel = obs_dict['actor_obs'][:, 29:52]
+                    actions = obs_dict['actor_obs'][:, 52:75]
+                    ref_motion_phase = obs_dict['actor_obs'][:, 75:76]
+                    history_actor =obs_dict['actor_obs'][:, 76:]
+
+                    print(
+                        f"[Step {i}] base_ang_vel mean: {base_ang_vel.mean().item():.4f}, std: {base_ang_vel.std().item():.4f}, min: {base_ang_vel.min().item():.4f}, max: {base_ang_vel.max().item():.4f}")
+                    print(
+                        f"[Step {i}] projected_gravity mean: {projected_gravity.mean().item():.4f}, std: {projected_gravity.std().item():.4f}, min: {projected_gravity.min().item():.4f}, max: {projected_gravity.max().item():.4f}")
+                    print(
+                        f"[Step {i}] pkl_action mean: {pkl_actions.mean().item():.4f}, std: {pkl_actions.std().item():.4f}, min: {pkl_actions.min().item():.4f}, max: {pkl_actions.max().item():.4f}")
+                    print(
+                        f"[Step {i}] final_action mean: {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}, min: {final_actions.min().item():.4f}, max: {final_actions.max().item():.4f}")
+                    print(
+                        f"actions mean: {actions.mean().item():.4f}, std: {actions.std().item():.4f}, min: {actions.min().item():.4f}, max: {actions.max().item():.4f}")
                 
          
-                '''print(f"Step {self.common_step_counter} - pkl_actions (mean): {pkl_actions.mean().item():.4f}, std: {pkl_actions.std().item():.4f}")
-                print(f"Step {self.common_step_counter} - delta_actions (mean): {delta_actions.mean().item():.4f}, std: {delta_actions.std().item():.4f}")
-                print(f"Step {self.common_step_counter} - final_actions (mean): {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}")
-                print(f"Step {self.common_step_counter} - obs_dict['closed_loop_actor_obs'] (mean): {obs_dict['closed_loop_actor_obs'].mean().item():.4f}, std: {obs_dict['closed_loop_actor_obs'].std().item():.4f}")'''
+                print(f" pkl_actions (mean): {pkl_actions.mean().item():.4f}, std: {pkl_actions.std().item():.4f}")
+                print(f"delta_actions (mean): {delta_actions.mean().item():.4f}, std: {delta_actions.std().item():.4f}")
+                print(f"final_actions (mean): {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}")
+                print(f"obs_dict['closed_loop_actor_obs'] (mean): {obs_dict['closed_loop_actor_obs'].mean().item():.4f}, std: {obs_dict['closed_loop_actor_obs'].std().item():.4f}")'''
                 
                 actor_state = {
                     "actions": final_actions,  # 使用最终动作
+                    "delta_actions": delta_actions,
                 }
 
                 obs_dict, rewards, dones, infos = self.env.step(actor_state)

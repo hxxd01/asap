@@ -176,7 +176,7 @@ class PPODeltaA(PPO):
                 policy_state_dict["values"] = values
                 #final_actions = delta_actions + pkl_actions  # 直接计算最终动作
                 final_actions =  delta_actions +pkl_actions
-                #final_actions =  pkl_actions
+               
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
                     self.storage.update_key(obs_key, obs_dict[obs_key])

@@ -59,8 +59,8 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             logger.info(f"Terminate when motion far threshold: {self.terminate_when_motion_far_threshold}")
 
         # Custom normalization parameters for base_pos
-        self._base_pos_norm_mean = torch.tensor([17.0, 17.0, 0.7], device=self.device, dtype=torch.float32)
-        #self._base_pos_norm_scale = torch.tensor([0.270, 0.267, 1], device=self.device, dtype=torch.float32)
+        self._base_pos_norm_mean = torch.tensor([111, 109, 0.7], device=self.device, dtype=torch.float32)
+        self._base_pos_norm_scale = torch.tensor([0.01, 0.01, 2], device=self.device, dtype=torch.float32)
 
     def teleop_callback(self, msg):
         self.teleop_marker_coords = torch.tensor(msg.data, device=self.device)
@@ -684,8 +684,14 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
     def _get_obs_base_pos(self):
         """获取机器人基础位置作为观察值，并进行归一化"""
         raw_pos = self.simulator.robot_root_states[:, 0:3]
-        #normalized_pos = (raw_pos - self._base_pos_norm_mean) * self._base_pos_norm_scale
-        normalized_pos = (raw_pos - self._base_pos_norm_mean)
+        '''print(f"base_pos x: min={raw_pos[:, 0].min().item():.4f}, max={raw_pos[:, 0].max().item():.4f}")
+        print(f"base_pos y: min={raw_pos[:, 1].min().item():.4f}, max={raw_pos[:, 1].max().item():.4f}")
+        print(f"base_pos z: min={raw_pos[:, 2].min().item():.4f}, max={raw_pos[:, 2].max().item():.4f}")
+        print(f"base_pos x: mean={raw_pos[:, 0].mean().item():.4f}, std={raw_pos[:, 0].std().item():.4f}")
+        print(f"base_pos y: mean={raw_pos[:, 1].mean().item():.4f}, std={raw_pos[:, 1].std().item():.4f}")
+        print(f"base_pos z: mean={raw_pos[:, 2].mean().item():.4f}, std={raw_pos[:, 2].std().item():.4f}")'''
+        normalized_pos = (raw_pos - self._base_pos_norm_mean) * self._base_pos_norm_scale
+        
         return normalized_pos
 
     def _get_obs_base_rot(self):

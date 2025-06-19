@@ -21,7 +21,7 @@ obs:
       
       base_rot, # 基座四元数方向  4维
       base_lin_vel,  # 基座线速度 3维
-      #base_pos, #  3d位置 3维  x,y,z [m]
+      base_pos, #  3d位置 3维  x,y,z [m]
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23
@@ -29,7 +29,7 @@ obs:
       # dif_local_rigid_body_pos,
       # local_ref_rigid_body_pos,
       
-    #在预训练的奖励函数下测试：加base_pos有问题，效果会差不少
+    #在预训练的奖励函数下测试：加base_pos有问题，效果会差不少,进行归一化后发现，可以有效的调整lower_body_norm
     ]
     closed_loop_actor_obs: [
     base_ang_vel,  # base角速度（3维）
@@ -75,8 +75,8 @@ obs:
     }
   #这里论文没有给出base_rot和 base_pos的缩放系数，分析其他范围，最后观测绝对值大致都缩放到了2-7的范围
   obs_scales: {
-    base_rot: 1.0,
-    base_pos: 0.05,
+    base_rot: 5.0,
+    base_pos: 7.0,
     base_lin_vel: 2.0,
     base_ang_vel: 0.25,
     projected_gravity: 1.0,

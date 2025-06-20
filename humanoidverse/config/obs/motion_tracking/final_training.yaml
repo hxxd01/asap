@@ -20,10 +20,12 @@ obs:
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23
+      ref_motion_phase,  # 参考运动相位（1维）
+      history_actor,  # 历史观测
       z_actions,  # 当前动作 23
       # dif_local_rigid_body_pos,
       # local_ref_rigid_body_pos,
-    
+
     ]
     critic_obs: [
       base_lin_vel,
@@ -47,7 +49,14 @@ obs:
       actions: 4,
       ref_motion_phase: 4
     }
-
+    history_delta_actor: {
+      base_rot: 1,
+      base_lin_vel: 1,
+      base_pos: 1,
+      base_ang_vel: 1,
+      dof_pos: 1,
+      dof_vel: 1,
+    }
     history_critic: {
       base_lin_vel: 4,
       base_ang_vel: 4,
@@ -71,6 +80,7 @@ obs:
     local_ref_rigid_body_pos: 1.0,
     ref_motion_phase: 1.0,
     history_actor: 1.0,
+    history_delta_actor: 1.0,
     history_critic: 1.0,
     z_actions: 1.0,
   }
@@ -88,6 +98,7 @@ obs:
     local_ref_rigid_body_pos: 0.0,
     ref_motion_phase: 0.0,
     history_actor: 0.0,
+    history_delta_actor: 0.0,
     history_critic: 0.0,
     z_actions: 0.0,
   }

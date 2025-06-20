@@ -109,7 +109,8 @@ class PPODeltaD(PPO):
                     actions # 用当前策略的actions构建残差模型的输入
                 ], dim=1)
                 delta_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
-                    
+                '''mean_delta = delta_actions.mean().item()
+                print(f"mean_delta: {mean_delta}")'''
 
 
                 ## Append states to storage

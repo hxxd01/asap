@@ -17,14 +17,14 @@ obs:
   #会按照字母对观测排序，所以pkl_actions一定要z开头
   obs_dict:
     actor_obs: [
-      
-      
+
       base_rot, # 基座四元数方向  4维
       base_lin_vel,  # 基座线速度 3维
       base_pos, #  3d位置 3维  x,y,z [m]
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23
+      #history_delta_actor,
       z_actions,  # 当前动作 23
       # dif_local_rigid_body_pos,
       # local_ref_rigid_body_pos,
@@ -63,7 +63,14 @@ obs:
       actions: 4,
       ref_motion_phase: 4
     }
-
+    history_delta_actor: {
+      base_rot: 1,
+      base_lin_vel: 1,
+      base_pos: 1,
+      base_ang_vel: 1,
+      dof_pos: 1,
+      dof_vel: 1,
+    }
     history_critic: {
       base_lin_vel: 4,
       base_ang_vel: 4,
@@ -87,6 +94,7 @@ obs:
     local_ref_rigid_body_pos: 1.0,
     ref_motion_phase: 1.0,
     history_actor: 1.0,
+    history_delta_actor: 1.0,
     history_critic: 1.0,
     z_actions: 1.0,
   }
@@ -104,6 +112,7 @@ obs:
     local_ref_rigid_body_pos: 0.0,
     ref_motion_phase: 0.0,
     history_actor: 0.0,
+    history_delta_actor: 0.0,
     history_critic: 0.0,
     z_actions: 0.0,
   }

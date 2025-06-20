@@ -731,7 +731,9 @@ class LeggedRobotBase(BaseTask):
 
     def _reward_action_norm(self):
         # Penalize large action magnitudes according to exp(-(||a_t||) - 1)
-        return torch.exp(torch.norm(self.delta_actions, dim=-1) - 1.0)
+        reward = torch.exp(torch.norm(self.delta_actions, dim=-1) - 1.0)
+        #reward = torch.clamp(reward, min=0.0, max=20)  
+        return reward
 
     def _reward_penalty_orientation(self):
         # Penalize non flat base orientation

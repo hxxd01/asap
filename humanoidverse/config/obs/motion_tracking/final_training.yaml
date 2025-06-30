@@ -20,8 +20,9 @@ obs:
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23
-      ref_motion_phase,  # 参考运动相位（1维）
-      history_actor,  # 历史观测
+      #actions,
+      #ref_motion_phase,
+      #history_delta_actor,
       z_actions,  # 当前动作 23
       # dif_local_rigid_body_pos,
       # local_ref_rigid_body_pos,

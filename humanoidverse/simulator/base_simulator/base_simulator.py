@@ -5,17 +5,16 @@ import torch
 
 class BaseSimulator:
     """
-    Base class for robotic simulation environments, providing a framework for simulation setup, 
-    environment creation, and control over robotic assets and simulation properties.
-    """
+机器人仿真环境的基类，为仿真设置、环境创建、机器人资产和仿真属性的控制提供框架。
+"""
     def __init__(self, config, device):
         """
-        Initializes the base simulator with configuration settings and simulation device.
-        
-        Args:
-            config (dict): Configuration dictionary for the simulation.
-            device (str): Device type for simulation ('cpu' or 'cuda').
-        """
+    使用配置设置和仿真设备初始化基础仿真器。
+
+    参数：
+        config (dict): 仿真的配置字典。
+        device (str): 仿真所用设备类型（'cpu' 或 'cuda'）。
+    """
         self.config = config
         self.sim_device = device
         self.headless = False
@@ -29,17 +28,16 @@ class BaseSimulator:
 
     def set_headless(self, headless):
         """
-        Sets the headless mode for the simulator.
+            设置仿真器的无头模式。
 
-        Args:
-            headless (bool): If True, runs the simulation without graphical display.
-        """
+            参数：
+                headless (bool): 如果为 True，则仿真无图形界面运行。
+            """
         self.headless = headless
 
     def setup(self):
         """
-        Initializes the simulator parameters and environment. This method should be implemented 
-        by subclasses to set specific simulator configurations.
+        初始化仿真器参数和环境。该方法应由子类实现以设置特定的仿真器配置。
         """
         raise NotImplementedError("The 'setup' method must be implemented in subclasses.")
 
@@ -47,10 +45,10 @@ class BaseSimulator:
 
     def setup_terrain(self, mesh_type):
         """
-        Configures the terrain based on specified mesh type. 
+        根据指定的网格类型配置地形。
 
-        Args:
-            mesh_type (str): Type of terrain mesh ('plane', 'heightfield', 'trimesh').
+        参数：
+            mesh_type (str): 地形网格类型（'plane'、'heightfield'、'trimesh'）。
         """
         raise NotImplementedError("The 'setup_terrain' method must be implemented in subclasses.")
 
@@ -58,10 +56,10 @@ class BaseSimulator:
 
     def load_assets(self, robot_config):
         """
-        Loads the robot assets into the simulation environment.
-        save self.num_dofs, self.num_bodies, self.dof_names, self.body_names
-        Args:
-            robot_config (dict): HumanoidVerse Configuration for the robot asset.
+            将机器人资产加载到仿真环境中。
+        保存 self.num_dofs, self.num_bodies, self.dof_names, self.body_names
+        参数：
+            robot_config (dict): 机器人资产的 HumanoidVerse 配置。
         """
         raise NotImplementedError("The 'load_assets' method must be implemented in subclasses.")
 
@@ -69,13 +67,13 @@ class BaseSimulator:
 
     def create_envs(self, num_envs, env_origins, base_init_state, env_config):
         """
-        Creates and initializes environments with specified configurations.
+           使用指定的配置创建并初始化环境。
 
-        Args:
-            num_envs (int): Number of environments to create.
-            env_origins (list): List of origin positions for each environment.
-            base_init_state (array): Initial state of the base.
-            env_config (dict): Configuration for each environment.
+        参数：
+            num_envs (int): 要创建的环境数量。
+            env_origins (list): 每个环境的原点位置列表。
+            base_init_state (array): 基座的初始状态。
+            env_config (dict): 每个环境的配置。
         """
         raise NotImplementedError("The 'create_envs' method must be implemented in subclasses.")
 
@@ -83,36 +81,36 @@ class BaseSimulator:
 
     def get_dof_limits_properties(self):
         """
-        Retrieves the DOF (degrees of freedom) limits and properties.
-        
-        Returns:
-            Tuple of tensors representing position limits, velocity limits, and torque limits for each DOF.
+           获取自由度（DOF）的限制和属性。
+
+        返回：
+            表示每个 DOF 的位置限制、速度限制和力矩限制的张量元组。
         """
         raise NotImplementedError("The 'get_dof_limits_properties' method must be implemented in subclasses.")
-    
+
     def find_rigid_body_indice(self, body_name):
         """
-        Finds the index of a specified rigid body.
+            查找指定刚体的索引。
 
-        Args:
-            body_name (str): Name of the rigid body to locate.
+        参数：
+            body_name (str): 要定位的刚体名称。
 
-        Returns:
-            int: Index of the rigid body.
+        返回：
+            int: 刚体的索引。
         """
         raise NotImplementedError("The 'find_rigid_body_indice' method must be implemented in subclasses.")
-    
+
     # ----- Simulation Preparation and Refresh Methods -----
 
     def prepare_sim(self):
         """
-        Prepares the simulation environment and refreshes any relevant tensors.
+        准备仿真环境并刷新相关张量。
         """
         raise NotImplementedError("The 'prepare_sim' method must be implemented in subclasses.")
-    
+
     def refresh_sim_tensors(self):
         """
-        Refreshes the state tensors in the simulation to ensure they are up-to-date.
+        刷新仿真中的状态张量，确保其为最新。
         """
         raise NotImplementedError("The 'refresh_sim_tensors' method must be implemented in subclasses.")
 
@@ -120,36 +118,36 @@ class BaseSimulator:
 
     def apply_torques_at_dof(self, torques):
         """
-        Applies the specified torques to the robot's degrees of freedom (DOF).
+            将指定的力矩应用到机器人的自由度（DOF）。
 
-        Args:
-            torques (tensor): Tensor containing torques to apply.
+        参数：
+            torques (tensor): 包含要施加的力矩的张量。
         """
         raise NotImplementedError("The 'apply_torques_at_dof' method must be implemented in subclasses.")
-    
+
     def set_actor_root_state_tensor(self, set_env_ids, root_states):
         """
-        Sets the root state tensor for specified actors within environments.
+        为环境中的指定 actor 设置根状态张量。
 
-        Args:
-            set_env_ids (tensor): Tensor of environment IDs where states will be set.
-            root_states (tensor): New root states to apply.
+        参数：
+            set_env_ids (tensor): 需要设置状态的环境 ID 张量。
+            root_states (tensor): 要应用的新根状态。
         """
         raise NotImplementedError("The 'set_actor_root_state_tensor' method must be implemented in subclasses.")
-    
+
     def set_dof_state_tensor(self, set_env_ids, dof_states):
         """
-        Sets the DOF state tensor for specified actors within environments.
+           为环境中的指定 actor 设置 DOF 状态张量。
 
-        Args:
-            set_env_ids (tensor): Tensor of environment IDs where states will be set.
-            dof_states (tensor): New DOF states to apply.
+        参数：
+            set_env_ids (tensor): 需要设置状态的环境 ID 张量。
+            dof_states (tensor): 要应用的新 DOF 状态。
         """
         raise NotImplementedError("The 'set_dof_state_tensor' method must be implemented in subclasses.")
 
     def simulate_at_each_physics_step(self):
         """
-        Advances the simulation by a single physics step.
+        推进仿真一步物理步长。
         """
         raise NotImplementedError("The 'simulate_at_each_physics_step' method must be implemented in subclasses.")
 
@@ -163,7 +161,7 @@ class BaseSimulator:
 
     def render(self, sync_frame_time=True):
         """
-        Renders the simulation frame-by-frame, syncing frame time if required.
+        按帧渲染仿真，如有需要同步帧时间。
 
         Args:
             sync_frame_time (bool): Whether to synchronize the frame time.

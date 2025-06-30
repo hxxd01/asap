@@ -103,52 +103,61 @@ class Genesis(BaseSimulator):
 
     def load_assets(self):
         """
-        Loads the robot assets into the simulation environment.
-        save self.num_dofs, self.num_bodies, self.dof_names, self.body_names
-        Args:
-            robot_config (dict): HumanoidVerse Configuration for the robot asset.
+        加载机器人资产到仿真环境中。
+        会保存 self.num_dofs, self.num_bodies, self.dof_names, self.body_names。
+        参数：
+            robot_config (dict): HumanoidVerse 机器人资产配置。
         """
+        # 读取初始四元数（xyzw），并转换为 wxyz 格式（Genesis 需要）
         init_quat_xyzw = self.robot_cfg.init_state.rot
         init_quat_wxyz = init_quat_xyzw[-1:] + init_quat_xyzw[:3]
+        # 读取初始位置
         self.base_init_pos = torch.tensor(
             self.robot_cfg.init_state.pos, device=self.device
         )
-        # self.base_init_pos[2] += 1.5
+        # self.base_init_pos[2] += 1.5  # 可选：抬高初始高度
+        # 读取初始四元数（wxyz）
         self.base_init_quat = torch.tensor(
             init_quat_wxyz, device=self.device
         )
 
+        # 读取机器人资产的根目录和URDF文件名
         asset_root = self.robot_cfg.asset.asset_root
         asset_file = self.robot_cfg.asset.urdf_file
         asset_path = os.path.join(asset_root, asset_file)
-        #在这个地方读取
+        # 在此处通过URDF文件加载机器人到仿真场景
         self.robot = self.scene.add_entity(
             gs.morphs.URDF(
                 file=asset_path,
-                merge_fixed_links=True,
-                links_to_keep=self.robot_cfg.body_names,
-                pos=self.base_init_pos.cpu().numpy(),
-                quat=self.base_init_quat.cpu().numpy(),
+                merge_fixed_links=True,  # 合并固定连接
+                links_to_keep=self.robot_cfg.body_names,  # 只保留需要的link
+                pos=self.base_init_pos.cpu().numpy(),     # 初始位置
+                quat=self.base_init_quat.cpu().numpy(),   # 初始姿态
             ),
-            visualize_contact=False,
+            visualize_contact=False,  # 不可视化接触
         )
 
+        # 复制关节名称列表
         dof_names_list = copy.deepcopy(self.robot_cfg.dof_names)
 
+        # 获取Genesis实际的link名称列表
         self.genesis_link_names = [link.name for link in self.robot.links]
+        # humanoidverse配置中的link名称列表
         self.humanoidverse_link_names = self.robot_cfg.body_names
+        # 建立Genesis link顺序到HumanoidVerse link顺序的索引映射
         self.link_mapping_genesis_to_humanoidverse_idx = [self.genesis_link_names.index(name) for name in self.humanoidverse_link_names]
         
-        # names to indices
+        # 关节名称到索引的映射
         self.dof_ids = [
             self.robot.get_joint(name).dof_idx_local
             for name in dof_names_list
         ]
 
+        # 保存身体和关节相关信息
         self.body_names = self.robot_cfg.body_names
-        self.num_bodies = len(self.body_names)                # = len(self.rigid_solver.links) - 1
+        self.num_bodies = len(self.body_names)                # 刚体数量
         self.dof_names = dof_names_list
-        self.num_dof = len(dof_names_list)                    # = len(self.rigid_solver.joints) - 2
+        self.num_dof = len(dof_names_list)                    # 关节数量
 
     # ----- Environment Creation Methods -----
 

@@ -33,8 +33,11 @@ class BaseTask():
         self.device = self.simulator.sim_device
         self.sim_dt = self.simulator.sim_dt
         self.up_axis_idx = 2 # Jiawei: HARD CODE FOR NOW
-        
-        self.dt = self.config.simulator.config.sim.control_decimation * self.sim_dt
+
+        self.dt = self.config.simulator.config.sim.control_decimation * self.sim_dt  #self.sim_dt=0.005,self.dt=0.02
+        #print(self.sim_dt)
+        #print(self.dt)
+
         self.max_episode_length_s = self.config.max_episode_length_s
         self.max_episode_length = np.ceil(self.max_episode_length_s / self.dt)
 

@@ -1,76 +1,169 @@
+import sys
+import os
+from loguru import logger
+import torch
 
-保存轨迹：
-python humanoidverse/eval_agent.py \
-+checkpoint=/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_19900.pt \
-+simulator=isaacgym \
-+env.config.ckpt_dir=/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof \
-+env.config.termination.terminate_when_motion_far=False \
-+env.config.termination.terminate_by_gravity=False \
-+env.config.save_motion=True \
-+env.config.save_total_steps=100 \
-+env.config.save_note="gym" \
-+headless=True \
-env.config.termination.terminate_when_motion_far=False \
-env.config.termination.terminate_by_gravity=False
+class BaseSimulator:
+    """
+机器人仿真环境的基类，为仿真设置、环境创建、机器人资产和仿真属性的控制提供框架。
+"""
+    def __init__(self, config, device):
+        """
+    使用配置设置和仿真设备初始化基础仿真器。
 
+    参数：
+        config (dict): 仿真的配置字典。
+        device (str): 仿真所用设备类型（'cpu' 或 'cuda'）。
+    """
+        self.config = config
+        self.sim_device = device
+        self.headless = False
 
+        self._rigid_body_pos: torch.Tensor
+        self._rigid_body_rot: torch.Tensor
+        self._rigid_body_vel: torch.Tensor
+        self._rigid_body_ang_vel: torch.Tensor
 
+    # ----- Configuration Setup Methods -----
 
+    def set_headless(self, headless):
+        """
+            设置仿真器的无头模式。
 
-python humanoidverse/train_agent.py \
-+simulator=isaacgym \
-+exp=motion_tracking \
-+domain_rand=NO_domain_rand \
-+rewards=motion_tracking/reward_motion_tracking_dm_2real \
-+robot=g1/g1_29dof_anneal_23dof \
-+terrain=terrain_locomotion_plane \
-+obs=motion_tracking/deepmimic_a2c_nolinvel_LARGEnoise_history \  # obs的config文件
-+policy_checkpoint="/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_19900.pt" \
-num_envs=2048 \
-project_name=MotionTracking \
-experiment_name=MotionTracking_CR7 \
-robot.motion.motion_file="/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/eval_save_.pkl" \
-rewards.reward_penalty_curriculum=True \
-rewards.reward_penalty_degree=0.00001 \
-env.config.resample_motion_when_training=False \
-env.config.termination.terminate_when_motion_far=True \
-env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
-env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
-env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
-robot.asset.self_collisions=0
+            参数：
+                headless (bool): 如果为 True，则仿真无图形界面运行。
+            """
+        self.headless = headless
 
+    def setup(self):
+        """
+        初始化仿真器参数和环境。该方法应由子类实现以设置特定的仿真器配置。
+        """
+        raise NotImplementedError("The 'setup' method must be implemented in subclasses.")
 
-"humanoidverse/data/motions/g1_29dof_anneal_23dof/TairanTestbed/singles/0-TairanTestbed_TairanTestbed_CR7_video_CR7_level1_filter_amass.pkl"
+    # ----- Terrain Setup Methods -----
 
-# "/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/eval_save_.pkl"
+    def setup_terrain(self, mesh_type):
+        """
+        根据指定的网格类型配置地形。
 
-/home/harry/Desktop/ASAP (1)/humanoidverse/config/rewards/motion_tracking/reward_motion_tracking_dm_2real.yaml
+        参数：
+            mesh_type (str): 地形网格类型（'plane'、'heightfield'、'trimesh'）。
+        """
+        raise NotImplementedError("The 'setup_terrain' method must be implemented in subclasses.")
 
-/home/harry/Desktop/ASAP (1)/humanoidverse/config/rewards/motion_tracking/delta_action_rewards.yaml
+    # ----- Robot Asset Setup Methods -----
 
+    def load_assets(self, robot_config):
+        """
+            将机器人资产加载到仿真环境中。
+        保存 self.num_dofs, self.num_bodies, self.dof_names, self.body_names
+        参数：
+            robot_config (dict): 机器人资产的 HumanoidVerse 配置。
+        """
+        raise NotImplementedError("The 'load_assets' method must be implemented in subclasses.")
 
-/home/harry/Desktop/ASAP (1)/humanoidverse/config/obs/motion_tracking/deepmimic_a2c_nolinvel_LARGEnoise_history.yaml
+    # ----- Environment Creation Methods -----
 
-delta_action_obs.yaml
+    def create_envs(self, num_envs, env_origins, base_init_state, env_config):
+        """
+           使用指定的配置创建并初始化环境。
 
+        参数：
+            num_envs (int): 要创建的环境数量。
+            env_origins (list): 每个环境的原点位置列表。
+            base_init_state (array): 基座的初始状态。
+            env_config (dict): 每个环境的配置。
+        """
+        raise NotImplementedError("The 'create_envs' method must be implemented in subclasses.")
 
-python humanoidverse/train_agent.py \
-+simulator=isaacgym \
-+exp=motion_tracking \
-+domain_rand=NO_domain_rand \
-+rewards=motion_tracking/reward_motion_tracking_dm_2real \
-+robot=g1/g1_29dof_anneal_23dof \
-+terrain=terrain_locomotion_plane \
-+obs=motion_tracking/delta_action_obs \
-num_envs=4096 \
-project_name=MotionTracking \
-experiment_name=MotionTracking_CR7 \
-robot.motion.motion_file="/home/harry/Desktop/ASAP/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/eval_save_.pkl" \
-rewards.reward_penalty_curriculum=True \
-rewards.reward_penalty_degree=0.00001 \
-env.config.resample_motion_when_training=False \
-env.config.termination.terminate_when_motion_far=True \
-env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
-env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
-env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
-robot.asset.self_collisions=0
+    # ----- Property Retrieval Methods -----
+
+    def get_dof_limits_properties(self):
+        """
+           获取自由度（DOF）的限制和属性。
+
+        返回：
+            表示每个 DOF 的位置限制、速度限制和力矩限制的张量元组。
+        """
+        raise NotImplementedError("The 'get_dof_limits_properties' method must be implemented in subclasses.")
+
+    def find_rigid_body_indice(self, body_name):
+        """
+            查找指定刚体的索引。
+
+        参数：
+            body_name (str): 要定位的刚体名称。
+
+        返回：
+            int: 刚体的索引。
+        """
+        raise NotImplementedError("The 'find_rigid_body_indice' method must be implemented in subclasses.")
+
+    # ----- Simulation Preparation and Refresh Methods -----
+
+    def prepare_sim(self):
+        """
+        准备仿真环境并刷新相关张量。
+        """
+        raise NotImplementedError("The 'prepare_sim' method must be implemented in subclasses.")
+
+    def refresh_sim_tensors(self):
+        """
+        刷新仿真中的状态张量，确保其为最新。
+        """
+        raise NotImplementedError("The 'refresh_sim_tensors' method must be implemented in subclasses.")
+
+    # ----- Control Application Methods -----
+
+    def apply_torques_at_dof(self, torques):
+        """
+            将指定的力矩应用到机器人的自由度（DOF）。
+
+        参数：
+            torques (tensor): 包含要施加的力矩的张量。
+        """
+        raise NotImplementedError("The 'apply_torques_at_dof' method must be implemented in subclasses.")
+
+    def set_actor_root_state_tensor(self, set_env_ids, root_states):
+        """
+        为环境中的指定 actor 设置根状态张量。
+
+        参数：
+            set_env_ids (tensor): 需要设置状态的环境 ID 张量。
+            root_states (tensor): 要应用的新根状态。
+        """
+        raise NotImplementedError("The 'set_actor_root_state_tensor' method must be implemented in subclasses.")
+
+    def set_dof_state_tensor(self, set_env_ids, dof_states):
+        """
+           为环境中的指定 actor 设置 DOF 状态张量。
+
+        参数：
+            set_env_ids (tensor): 需要设置状态的环境 ID 张量。
+            dof_states (tensor): 要应用的新 DOF 状态。
+        """
+        raise NotImplementedError("The 'set_dof_state_tensor' method must be implemented in subclasses.")
+
+    def simulate_at_each_physics_step(self):
+        """
+        Advances the simulation by a single physics step.
+        """
+        raise NotImplementedError("The 'simulate_at_each_physics_step' method must be implemented in subclasses.")
+
+    # ----- Viewer Setup and Rendering Methods -----
+
+    def setup_viewer(self):
+        """
+        Sets up a viewer for visualizing the simulation, allowing keyboard interactions.
+        """
+        raise NotImplementedError("The 'setup_viewer' method must be implemented in subclasses.")
+
+    def render(self, sync_frame_time=True):
+        """
+        Renders the simulation frame-by-frame, syncing frame time if required.
+
+        Args:
+            sync_frame_time (bool): Whether to synchronize the frame time.
+        """
+        raise NotImplementedError("The 'render' method must be implemented in subclasses.")

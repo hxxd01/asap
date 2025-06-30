@@ -24,6 +24,8 @@ obs:
       base_ang_vel,  # 角速度 3维
       dof_pos, # 关节角度 23
       dof_vel,  # 关节速度 23
+      #actions,
+      #ref_motion_phase,
       #history_delta_actor,
       z_actions,  # 当前动作 23
       # dif_local_rigid_body_pos,
@@ -64,12 +66,14 @@ obs:
       ref_motion_phase: 4
     }
     history_delta_actor: {
-      base_rot: 1,
-      base_lin_vel: 1,
-      base_pos: 1,
-      base_ang_vel: 1,
-      dof_pos: 1,
-      dof_vel: 1,
+      base_rot: 3,
+      base_lin_vel: 3,
+      base_pos: 3,
+      base_ang_vel: 3,
+      dof_pos: 3,
+      dof_vel: 3,
+      actions: 3,
+      ref_motion_phase: 3
     }
     history_critic: {
       base_lin_vel: 4,

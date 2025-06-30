@@ -141,6 +141,24 @@ class PPODeltaA(PPO):
 
         return policy_state_dict'''
 
+    @torch.no_grad()
+    def evaluate_policy(self):
+        self._create_eval_callbacks()
+        self._pre_evaluate_policy()
+        actor_state = self._create_actor_state()
+        step = 0
+        self.eval_policy = self._get_inference_policy()
+        obs_dict = self.env.reset_all()
+        init_actions = torch.zeros(self.env.num_envs, self.num_act, device=self.device)
+        actor_state.update({"obs": obs_dict, "actions": init_actions})
+        actor_state = self._pre_eval_env_step(actor_state)
+        while True:
+            actor_state["step"] = step
+            actor_state = self._pre_eval_env_step(actor_state)
+            actor_state = self.env_step(actor_state)
+            actor_state = self._post_eval_env_step(actor_state)
+            step += 1
+        self._post_evaluate_policy()
     def _rollout_step(self, obs_dict):
         with torch.inference_mode():
             for i in range(self.num_steps_per_env):
@@ -176,16 +194,17 @@ class PPODeltaA(PPO):
                 policy_state_dict["values"] = values
                 #final_actions = delta_actions + pkl_actions  # 直接计算最终动作
                 final_actions =  delta_actions +pkl_actions
-               
+
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
                     self.storage.update_key(obs_key, obs_dict[obs_key])
 
                 for obs_ in policy_state_dict.keys():
                     self.storage.update_key(obs_, policy_state_dict[obs_])
-                
-                     # delta action
 
+                     # delta action
+               
+                
                 '''if i % 10 == 0:
                     base_ang_vel = obs_dict['actor_obs'][:, 0:3]
                     projected_gravity = obs_dict['actor_obs'][:, 3:6]
@@ -204,13 +223,10 @@ class PPODeltaA(PPO):
                     print(
                         f"[Step {i}] final_action mean: {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}, min: {final_actions.min().item():.4f}, max: {final_actions.max().item():.4f}")
                     print(
-                        f"actions mean: {actions.mean().item():.4f}, std: {actions.std().item():.4f}, min: {actions.min().item():.4f}, max: {actions.max().item():.4f}")
+                        f"actions mean: {actions.mean().item():.4f}, std: {actions.std().item():.4f}, min: {actions.min().item():.4f}, max: {actions.max().item():.4f}")'''
                 
          
-                print(f" pkl_actions (mean): {pkl_actions.mean().item():.4f}, std: {pkl_actions.std().item():.4f}")
-                print(f"delta_actions (mean): {delta_actions.mean().item():.4f}, std: {delta_actions.std().item():.4f}")
-                print(f"final_actions (mean): {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}")
-                print(f"obs_dict['closed_loop_actor_obs'] (mean): {obs_dict['closed_loop_actor_obs'].mean().item():.4f}, std: {obs_dict['closed_loop_actor_obs'].std().item():.4f}")'''
+               
                 
                 actor_state = {
                     "actions": final_actions,  # 使用最终动作

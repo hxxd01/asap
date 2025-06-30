@@ -36,6 +36,9 @@ class LeggedRobotBase(BaseTask):
         self.history_handler = HistoryHandler(self.num_envs, config.obs.obs_auxiliary, config.obs.obs_dims, device)
         self.is_evaluating = False
         self.init_done = True
+        self.delta_action_history = []
+        self.delta_action_history_max_window = 10000
+        self.delta_action_history_max = 0.0
 
     def _init_buffers(self):
         """ Initialize torch tensors which will contain simulation states and processed quantities
@@ -206,6 +209,24 @@ class LeggedRobotBase(BaseTask):
         actions = actor_state["actions"]
         if "delta_actions" in actor_state:
             self.delta_actions = actor_state["delta_actions"]
+            delta_actions = actor_state["delta_actions"].detach().cpu().numpy()  # shape: (num_envs, num_actions_per_env)
+            # 先对所有环境取均值，得到 shape: (num_actions_per_env,)
+            delta_actions_mean = delta_actions.mean(axis=0)
+            self.delta_action_history.append(delta_actions_mean)
+            if len(self.delta_action_history) > self.delta_action_history_max_window:
+                self.delta_action_history.pop(0)
+            
+            if self.delta_action_history:
+                # shape: (window, num_actions_per_env)
+                arr = np.stack(self.delta_action_history, axis=0)
+                # 对window维度取均值，得到每个动作维度的平均动作变化
+                mean_per_dim = arr.mean(axis=0)  # shape: (num_actions_per_env,)
+                # 在动作维度上取最大
+                max_mean = mean_per_dim.max()
+            else:
+                max_mean = 0.0
+
+            self.log_dict["delta_action_history_max_mean"] = torch.tensor(max_mean, dtype=torch.float32)
         #print(self.delta_actions)
         # actions *= 0.0
         self._pre_physics_step(actions)
@@ -239,6 +260,7 @@ class LeggedRobotBase(BaseTask):
     def _physics_step(self):
         self.render()
         for _ in range(self.config.simulator.config.sim.control_decimation):
+
             self._apply_force_in_physics_step()
             self.simulator.simulate_at_each_physics_step()
 
@@ -712,35 +734,35 @@ class LeggedRobotBase(BaseTask):
     def _reward_termination(self):
         # Terminal reward / penalty
         return self.reset_buf * ~self.time_out_buf
-
+    #对每个关节的力矩平方求和,惩罚电机输出的力矩（torque）过大。
     def _reward_penalty_torques(self):
         # Penalize torques
         return torch.sum(torch.square(self.torques), dim=1)
-    
+    #对每个关节速度的平方求和,惩罚关节速度过大
     def _reward_penalty_dof_vel(self):
         # Penalize dof velocities
         return torch.sum(torch.square(self.simulator.dof_vel), dim=1)
-    
+    #用当前和上一步的关节速度之差除以时间步长，得到加速度，再平方求和;惩罚关节加速度过大。
     def _reward_penalty_dof_acc(self):
         # Penalize dof accelerations
         return torch.sum(torch.square((self.last_dof_vel - self.simulator.dof_vel) / self.dt), dim=1)
-    
+    #当前动作和上一步动作之差的平方和,惩罚动作变化过快。
     def _reward_penalty_action_rate(self):
         # Penalize changes in actions
         return torch.sum(torch.square(self.actions - self.last_actions), dim=1)
-
+    #鼓励输出的动作不要太大。
     def _reward_action_norm(self):
-        # Penalize large action magnitudes according to exp(-(||a_t||) - 1)
-        reward = torch.exp(torch.norm(self.delta_actions, dim=-1) - 1.0)
-        reward = torch.clamp(reward, min=0.0, max=200)
+        
+        reward = torch.exp(torch.norm(self.delta_actions, dim=-1) )-1
+        reward = torch.clamp(reward, min=0.0, max=1000)
         return reward
-
+    #重力投影在base坐标系下的x、y分量平方和。惩罚机器人base姿态偏离水平。
     def _reward_penalty_orientation(self):
         # Penalize non flat base orientation
         return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
 
     ######################## LIMITS REWARDS #########################
-
+    #如果关节角度超出软/硬极限，clip后求和,惩罚关节角度接近极限。
     def _reward_limits_dof_pos(self):
         # Penalize dof positions too close to the limit
 
@@ -755,7 +777,7 @@ class LeggedRobotBase(BaseTask):
         out_of_limits = -(self.simulator.dof_pos - lower_soft_limit).clip(max=0.) # lower limit
         out_of_limits += (self.simulator.dof_pos - upper_soft_limit).clip(min=0.)
         return torch.sum(out_of_limits, dim=1)
-
+    #关节速度超出软极限部分clip后求和。惩罚关节速度接近极限。
     def _reward_limits_dof_vel(self):
         # Penalize dof velocities too close to the limit
         # clip to max error = 1 rad/s per joint to avoid huge penalties
@@ -763,19 +785,19 @@ class LeggedRobotBase(BaseTask):
             return torch.sum((torch.abs(self.simulator.dof_vel) - self.dof_vel_limits * self.soft_dof_vel_curriculum_value).clip(min=0., max=1.), dim=1)
         else:
             return torch.sum((torch.abs(self.simulator.dof_vel) - self.dof_vel_limits * self.config.rewards.reward_limit.soft_dof_vel_limit).clip(min=0., max=1.), dim=1)
-
+    #力矩超出软极限部分clip后求和。惩罚力矩接近极限。防止电机过载。
     def _reward_limits_torque(self):
         # penalize torques too close to the limit
         if self.use_reward_limits_torque_curriculum:
             return torch.sum((torch.abs(self.torques) - self.torque_limits * self.soft_torque_curriculum_value).clip(min=0., max=1.), dim=1)
         else:
             return torch.sum((torch.abs(self.torques) - self.torque_limits * self.config.rewards.reward_limit.soft_torque_limit).clip(min=0.), dim=1)
-
+    #脚有接触力时，脚的速度越大惩罚越大。惩罚脚在接触地面时滑动。
     def _reward_penalty_slippage(self):
         # assert self.simulator._rigid_body_vel.shape[1] == 20
         foot_vel = self.simulator._rigid_body_vel[:, self.feet_indices]
         return torch.sum(torch.norm(foot_vel, dim=-1) * (torch.norm(self.simulator.contact_forces[:, self.feet_indices, :], dim=-1) > 1.), dim=1)
-
+    #脚离地后最高点与期望高度的差距，首次落地时奖励。奖励脚在腾空时达到期望高度。
     def _reward_feet_max_height_for_this_air(self):
         # Reward long steps
         # Need to filter the contacts because the contact reporting of PhysX is unreliable on meshes
@@ -790,7 +812,7 @@ class LeggedRobotBase(BaseTask):
         rew_feet_max_height = torch.sum((torch.clamp_min(self.config.rewards.desired_feet_max_height_for_this_air - self.feet_air_max_height, 0)) * from_air_to_contact, dim=1) # reward only on first contact with the ground
         self.feet_air_max_height *= ~contact_filt
         return rew_feet_max_height
-    
+    #脚和base的heading差的绝对值。奖励脚的朝向与身体朝向一致。
     def _reward_feet_heading_alignment(self):
         left_quat = self.simulator._rigid_body_rot[:, self.feet_indices[0]]
         right_quat = self.simulator._rigid_body_rot[:, self.feet_indices[1]]
@@ -808,7 +830,7 @@ class LeggedRobotBase(BaseTask):
         heading_diff_right = torch.abs(wrap_to_pi(heading_right_feet - heading_root))
         
         return heading_diff_left + heading_diff_right
-    
+    #脚的重力投影在x、y方向的平方和的平方根。惩罚脚的姿态偏离水平。
     def _reward_penalty_feet_ori(self):
         left_quat = self.simulator._rigid_body_rot[:, self.feet_indices[0]]
         left_gravity = quat_rotate_inverse(left_quat, self.gravity_vec)

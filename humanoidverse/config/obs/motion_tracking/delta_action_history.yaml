@@ -1,0 +1,142 @@
+# @package _global_
+#obs_dict代表残差模型的输入，closed_loop_actor_obs是预训练模型的输入
+# Be careful when using _raw, history
+
+#2025-06-17 16:46:06.665 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:248 - 收集到的 base_pos 统计数据:
+#2025-06-17 16:46:06.665 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:249 -   Mean: [17.3878    17.044662   0.7382653]
+#2025-06-17 16:46:06.666 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:250 -   Std: [11.446883  11.48439    0.1430747]
+#2025-06-17 16:46:06.666 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:251 -   Min: [-0.8662922  -1.5258566   0.12394433]
+#2025-06-17 16:46:06.666 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:252 -   Max: [35.494072  35.745766   1.2447076]
+#2025-06-17 16:46:06.667 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:260 - 收集到的 base_lin_vel 统计数据:
+#2025-06-17 16:46:06.667 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:261 -   Mean: [-0.1512751  -0.08700003 -0.25300938]
+#2025-06-17 16:46:06.667 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:262 -   Std: [0.5412188  0.6961547  0.83858263]
+#2025-06-17 16:46:06.668 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:263 -   Min: [-3.473472  -2.9288614 -3.9919364]
+#2025-06-17 16:46:06.668 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:264 -   Max: [2.8974745 6.3634696 3.3385065]
+obs:
+
+  #会按照字母对观测排序，所以pkl_actions一定要z开头
+  obs_dict:
+    actor_obs: [
+
+      base_ang_vel,  # base角速度（3维）
+      projected_gravity,  # 重力投影（3维）
+      dof_pos,  # 关节角度（23维）
+      dof_vel,  # 关节速度（23维）
+      actions,  # 上一时刻动作（23维）
+      ref_motion_phase,  # 参考运动相位（1维）
+      history_actor,  # 历史观测
+      z_actions
+
+    #在预训练的奖励函数下测试：加base_pos有问题，效果会差不少,进行归一化后发现，可以有效的调整lower_body_norm
+    ]
+    closed_loop_actor_obs: [
+    base_ang_vel,  # base角速度（3维）
+    projected_gravity,  # 重力投影（3维）
+    dof_pos,  # 关节角度（23维）
+    dof_vel,  # 关节速度（23维）
+    actions,  # 上一时刻动作（23维）
+    ref_motion_phase,  # 参考运动相位（1维）
+    history_actor  # 历史观测
+    ]
+    critic_obs: [
+      base_lin_vel,
+      base_ang_vel,
+      projected_gravity,
+      dof_pos,
+      dof_vel,
+      actions,
+      ref_motion_phase,
+      dif_local_rigid_body_pos,
+      local_ref_rigid_body_pos,
+      history_critic,
+      z_actions
+    ]
+
+  obs_auxiliary: # define those coumpounds in obs_dict, for example, you can define different long/short history with different length
+    history_actor: {
+      base_ang_vel: 4,
+      projected_gravity: 4,
+      dof_pos: 4,
+      dof_vel: 4,
+      actions: 4,
+      ref_motion_phase: 4
+    }
+    history_delta_actor: {
+      base_rot: 3,
+      base_lin_vel: 3,
+      base_pos: 3,
+      base_ang_vel: 3,
+      dof_pos: 3,
+      dof_vel: 3,
+      actions: 3,
+      ref_motion_phase: 3
+    }
+    history_critic: {
+      base_lin_vel: 4,
+      base_ang_vel: 4,
+      projected_gravity: 4,
+      dof_pos: 4,
+      dof_vel: 4,
+      actions: 4,
+      ref_motion_phase: 4
+    }
+  #这里论文没有给出base_rot和 base_pos的缩放系数，分析其他范围，最后观测绝对值大致都缩放到了2-7的范围
+  obs_scales: {
+    base_rot: 5.0,
+    base_pos: 7.0,
+    base_lin_vel: 2.0,
+    base_ang_vel: 0.25,
+    projected_gravity: 1.0,
+    dof_pos: 1.0,
+    dof_vel: 0.05,
+    actions: 1.0,
+    dif_local_rigid_body_pos: 1.0,
+    local_ref_rigid_body_pos: 1.0,
+    ref_motion_phase: 1.0,
+    history_actor: 1.0,
+    history_delta_actor: 1.0,
+    history_critic: 1.0,
+    z_actions: 1.0,
+  }
+
+  noise_scales: {
+    base_rot: 0.0,
+    base_pos: 0.0,
+    base_lin_vel: 0.0,
+    base_ang_vel: 0.3,
+    projected_gravity: 0.2,
+    dof_pos: 0.01,
+    dof_vel: 1.0,
+    actions: 0.0,
+    dif_local_rigid_body_pos: 0.0,
+    local_ref_rigid_body_pos: 0.0,
+    ref_motion_phase: 0.0,
+    history_actor: 0.0,
+    history_delta_actor: 0.0,
+    history_critic: 0.0,
+    z_actions: 0.0,
+  }
+
+  add_noise_currculum: False
+  noise_initial_value: 0.05
+  noise_value_max: 1.0
+  noise_value_min: 0.00001
+  soft_dof_pos_curriculum_degree: 0.00001
+  soft_dof_pos_curriculum_level_down_threshold: 40
+  soft_dof_pos_curriculum_level_up_threshold: 42
+
+  obs_dims:
+    - base_pos: 3
+    - base_rot: 4
+    - base_lin_vel: 3
+    - base_ang_vel: 3
+    - projected_gravity: 3
+    - dof_pos: ${robot.dof_obs_size}
+    - dof_vel: ${robot.dof_obs_size}
+    - z_actions: ${robot.dof_obs_size}
+    - actions: ${robot.dof_obs_size}
+    - dif_local_rigid_body_pos: ${eval:'3 * ${robot.num_bodies} + 9'} # hardcoded for 3 extended body
+    - local_ref_rigid_body_pos: ${eval:'3 * ${robot.num_bodies} + 9'}
+    - ref_motion_phase: 1
+
+  post_compute_config: {} # Will store values after preprocessing, don't put anything here

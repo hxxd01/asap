@@ -85,6 +85,8 @@ class PPODeltaD(PPO):
 
         # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
 
+        self.delta_action_dim_history = []  # 新增：记录每步每个维度的均值
+
     # def _actor_act_step(self, obs_dict):
     #     actions = self.actor.act(obs_dict["actor_obs"])
     #     return self.actor.act_inference(obs_dict["actor_obs"])
@@ -109,10 +111,30 @@ class PPODeltaD(PPO):
                     actions # 用当前策略的actions构建残差模型的输入
                 ], dim=1)
                 delta_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
-                '''mean_delta = delta_actions.mean().item()
-                print(f"mean_delta: {mean_delta}")'''
+                #delta_actions = torch.clamp(delta_actions, min=-0.8, max=0.8)
+                min_val = -0.8
+                max_val = 0.8
 
+                # 生成掩码：范围内为True，超出为False
+                mask = (delta_actions >= min_val) & (delta_actions <= max_val)
 
+                # 超出范围的动作置为0，范围内的动作保持原值
+                delta_actions = delta_actions * mask.float()
+                # 记录每步每个维度的均值
+                delta_action_dim_mean = delta_actions.mean(dim=0).cpu().numpy()  # shape: [action_dim]
+                #self.delta_action_dim_history.append(delta_action_dim_mean)
+                # 每隔100步打印一次历史均值
+                '''if len(self.delta_action_dim_history) % 100 == 0:
+                    import numpy as np
+                    hist_array = np.stack(self.delta_action_dim_history, axis=0)  # shape: [num_steps, action_dim]
+                    hist_mean = hist_array.mean(axis=0)
+                    print(f"[delta_action历史均值] step={len(self.delta_action_dim_history)}: {hist_mean}")
+                mean_delta = delta_actions.mean().item()
+                print(f"mean_delta: {mean_delta}")
+               
+                print(delta_actions.min().item())
+                print(delta_actions.max().item())
+                print(torch.exp(torch.norm(delta_actions, dim=-1) - 1.0))'''
                 ## Append states to storage
                 for obs_key in obs_dict.keys():
                     self.storage.update_key(obs_key, obs_dict[obs_key])
@@ -120,12 +142,13 @@ class PPODeltaD(PPO):
                 for obs_ in policy_state_dict.keys():
                     self.storage.update_key(obs_, policy_state_dict[obs_])
 
-
+            
                 #final_actions = actions+delta_actions
                 final_actions = actions +delta_actions
                 
                 actor_state = {
                     "actions": final_actions,  # 使用相加后的动作
+                    "delta_actions": delta_actions,
                 }
 
                 obs_dict, rewards, dones, infos = self.env.step(actor_state)

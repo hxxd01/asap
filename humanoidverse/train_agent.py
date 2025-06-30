@@ -108,6 +108,7 @@ def main(config: OmegaConf):
     #     fabric.seed_everything(config.seed + rank)
     #     seeding(config.seed + rank, torch_deterministic=config.torch_deterministic)
     config.env.config.save_rendering_dir = str(Path(config.experiment_dir) / "renderings_training")
+
     env: BaseEnv = instantiate(config=config.env, device=device)
 
 

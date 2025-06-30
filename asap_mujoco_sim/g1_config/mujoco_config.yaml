@@ -1,0 +1,86 @@
+# mujoco_config
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_7500.onnx
+#/home/harry/Desktop/ASAP1/asap_mujoco_sim/g1_config/model_14000.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_19900.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250625_221847-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_300.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_151151-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_500.onnx:
+
+# clip 0.8
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_173530-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_600.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_173530-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_1300.onnx
+#no clip
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_180644-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_300.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_180644-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_500.onnx
+# clip 0.5
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_182028-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_500.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250626_182028-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_700.onnx
+
+#4300 clip0.8
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_125403-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_600.onnx
+#8600
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_141938-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_100.onnx
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_141938-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_400.onnx:
+#12
+#/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_180037-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_400.onnx:
+#"/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_141938-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_300.onnx"
+policy_path: "/home/harry/Desktop/ASAP1/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_19900.onnx"
+cycle_time: 3.97
+
+xml_path: "g1_urdf/g1_29dof_anneal_23dof.xml"
+
+render: False
+num_single_obs: 76
+simulation_dt: 0.005 #0.001
+simulation_duration: 20
+control_decimation: 4 #20
+frame_stack: 4
+episode_steps: 160
+use_noise: True
+total_steps: 600
+
+default_dof_pos: [-0.1, 0.0, 0.0, 0.3, -0.2, 0,
+                 -0.1, 0.0, 0.0, 0.3, -0.2, 0,
+                  0.0, 0.0, 0.0,
+                   0.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 0.0]
+
+#default_dof_pos: [ 0.0, 0.0, 0.0, 0, 0, 0,
+#                      0, 0.0, 0.0, 0, 0, 0,
+#                      0.0, 0.0, 0.0,
+#                     0.0, 0.0, 0.0, 0.0,
+#                     0.0, 0.0, 0.0, 0.0]
+
+obs_scale_base_ang_vel: 0.25
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 0.05
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+
+num_actions: 23
+clip_observations: 100
+clip_actions: 100
+action_scale: 0.25
+
+kps: [100, 100, 100, 200, 20, 20,   
+      100, 100, 100, 200, 20, 20,   
+      400,400,400,  
+      90,60,20,60,  
+      90,60,20,60   
+      ]
+
+kds: [2.5, 2.5, 2.5, 5.0, 0.2, 0.1,  
+      2.5, 2.5, 2.5, 5.0, 0.2, 0.1,
+      5.0, 5.0, 5.0,
+      2.0, 1.0, 0.4, 1.0,
+      2.0, 1.0, 0.4, 1.0]
+ 
+
+tau_limit: [88, 88, 88, 139, 50, 50,
+            88, 88, 88, 139, 50, 50,
+            88, 50, 50,
+            25, 25, 25, 25,
+            25, 25, 25, 25]
+
+ 

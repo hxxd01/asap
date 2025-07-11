@@ -157,7 +157,7 @@ def main(override_config: OmegaConf):
 
     algo: BaseAlgo = instantiate(config.algo, env=env, device=device, log_dir=None)
     algo.setup()
-    algo.load(config.checkpoint)
+    algo.load(config.checkpoint,load_critic=False)
 
     EXPORT_POLICY = False
     EXPORT_ONNX = True

@@ -1,47 +1,44 @@
 # @package _global_
-#obs_dict代表残差模型的输入，closed_loop_actor_obs是预训练模型的输入
-# Be careful when using _raw, history
+# 纯残差动作模型观测配置 + 历史观测版本
+# 在原始82维基础上增加约300维历史信息，总计约382维
+# 保留原有的base_rot、base_pos等重要信息，同时增加历史观测能力
 
-#2025-06-17 16:46:06.665 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:248 - 收集到的 base_pos 统计数据:
-#2025-06-17 16:46:06.665 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:249 -   Mean: [17.3878    17.044662   0.7382653]
-#2025-06-17 16:46:06.666 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:250 -   Std: [11.446883  11.48439    0.1430747]
-#2025-06-17 16:46:06.666 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:251 -   Min: [-0.8662922  -1.5258566   0.12394433]
-#2025-06-17 16:46:06.666 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:252 -   Max: [35.494072  35.745766   1.2447076]
-#2025-06-17 16:46:06.667 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:260 - 收集到的 base_lin_vel 统计数据:
-#2025-06-17 16:46:06.667 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:261 -   Mean: [-0.1512751  -0.08700003 -0.25300938]
-#2025-06-17 16:46:06.667 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:262 -   Std: [0.5412188  0.6961547  0.83858263]
-#2025-06-17 16:46:06.668 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:263 -   Min: [-3.473472  -2.9288614 -3.9919364]
-#2025-06-17 16:46:06.668 | INFO     | humanoidverse.agents.delta_a.train_delta_a:_print_obs_stats:264 -   Max: [2.8974745 6.3634696 3.3385065]
 obs:
-
-  #会按照字母对观测排序，所以pkl_actions一定要z开头
   obs_dict:
+    # 残差网络输入观测 (约382维)
     actor_obs: [
-
-      base_ang_vel,  # base角速度（3维）
-      projected_gravity,  # 重力投影（3维）
-      dof_pos,  # 关节角度（23维）
-      dof_vel,  # 关节速度（23维）
-      actions,  # 上一时刻动作（23维）
-      ref_motion_phase,  # 参考运动相位（1维）
-      history_actor,  # 历史观测
-      z_actions
-
-    #在预训练的奖励函数下测试：加base_pos有问题，效果会差不少,进行归一化后发现，可以有效的调整lower_body_norm
+      base_rot,        # 基座四元数方向 (4维)
+      base_lin_vel,    # 基座线速度 (3维)  
+      base_pos,        # 3D位置 (3维)
+      base_ang_vel,    # 角速度 (3维)
+      dof_pos,         # 关节角度 (23维)
+      dof_vel,         # 关节速度 (23维)
+      z_actions,       # 当前PKL动作 (23维)
+      projected_gravity, # 重力投影 (3维) - 新增
+      ref_motion_phase,  # 参考运动相位 (1维) - 新增
+      history_delta_actor # 历史观测 (约300维) - 新增
+      # 总计: 4+3+3+3+23+23+23+3+1+300 = 386维
     ]
+    
+    # 预训练模型输入观测 (保持380维兼容)
     closed_loop_actor_obs: [
-    base_ang_vel,  # base角速度（3维）
-    projected_gravity,  # 重力投影（3维）
-    dof_pos,  # 关节角度（23维）
-    dof_vel,  # 关节速度（23维）
-    actions,  # 上一时刻动作（23维）
-    ref_motion_phase,  # 参考运动相位（1维）
-    history_actor  # 历史观测
+      base_ang_vel,     # base角速度 (3维)
+      projected_gravity, # 重力投影 (3维)
+      dof_pos,          # 关节角度 (23维)
+      dof_vel,          # 关节速度 (23维)
+      actions,          # 上一时刻动作 (23维)
+      ref_motion_phase, # 参考运动相位 (1维)
+      history_actor     # 历史观测 (304维)
+      # 总计: 3+3+23+23+23+1+304 = 380维
     ]
+    
+    # 评价网络输入观测
     critic_obs: [
       base_lin_vel,
       base_ang_vel,
       projected_gravity,
+      base_pos,        # 保留位置信息用于评价
+      base_rot,        # 保留姿态信息用于评价
       dof_pos,
       dof_vel,
       actions,
@@ -52,35 +49,45 @@ obs:
       z_actions
     ]
 
-  obs_auxiliary: # define those coumpounds in obs_dict, for example, you can define different long/short history with different length
-    history_actor: {
-      base_ang_vel: 4,
-      projected_gravity: 4,
-      dof_pos: 4,
-      dof_vel: 4,
-      actions: 4,
-      ref_motion_phase: 4
-    }
+  # 历史观测配置
+  obs_auxiliary:
+    # 为残差网络设计的历史观测 (约300维)
     history_delta_actor: {
-      base_rot: 3,
-      base_lin_vel: 3,
-      base_pos: 3,
-      base_ang_vel: 3,
-      dof_pos: 3,
-      dof_vel: 3,
-      actions: 3,
-      ref_motion_phase: 3
+      base_rot: 4,        # 4个时间步的姿态历史 (4×4=16维)
+      base_lin_vel: 4,    # 4个时间步的线速度历史 (4×3=12维)
+      base_pos: 4,        # 4个时间步的位置历史 (4×3=12维)
+      base_ang_vel: 4,    # 4个时间步的角速度历史 (4×3=12维)
+      dof_pos: 4,         # 4个时间步的关节角度历史 (4×23=92维)
+      dof_vel: 4,         # 4个时间步的关节速度历史 (4×23=92维)
+      actions: 4,       # 4个时间步的PKL动作历史 (4×23=92维)
+      projected_gravity: 4 # 4个时间步的重力投影历史 (4×3=12维)
+      # 总计: 16+12+12+12+92+92+92+12 = 340维
     }
+    
+    # 为预训练模型保持的历史观测 (304维)
+    history_actor: {
+      base_ang_vel: 4,      # 4个时间步的角速度历史 (4×3=12维)
+      projected_gravity: 4, # 4个时间步的重力投影历史 (4×3=12维)
+      dof_pos: 4,          # 4个时间步的关节角度历史 (4×23=92维)
+      dof_vel: 4,          # 4个时间步的关节速度历史 (4×23=92维)
+      actions: 4,          # 4个时间步的动作历史 (4×23=92维)
+      ref_motion_phase: 4  # 4个时间步的相位历史 (4×1=4维)
+    }
+    
+    # 评价网络历史观测
     history_critic: {
       base_lin_vel: 4,
       base_ang_vel: 4,
       projected_gravity: 4,
+      base_pos: 4,
+      base_rot: 4,
       dof_pos: 4,
       dof_vel: 4,
       actions: 4,
       ref_motion_phase: 4
     }
-  #这里论文没有给出base_rot和 base_pos的缩放系数，分析其他范围，最后观测绝对值大致都缩放到了2-7的范围
+
+  # 观测缩放配置
   obs_scales: {
     base_rot: 5.0,
     base_pos: 7.0,
@@ -99,6 +106,7 @@ obs:
     z_actions: 1.0,
   }
 
+  # 噪声配置
   noise_scales: {
     base_rot: 0.0,
     base_pos: 0.0,
@@ -139,4 +147,4 @@ obs:
     - local_ref_rigid_body_pos: ${eval:'3 * ${robot.num_bodies} + 9'}
     - ref_motion_phase: 1
 
-  post_compute_config: {} # Will store values after preprocessing, don't put anything here
+  post_compute_config: {} # Will store values after preprocessing, don't put anything here 

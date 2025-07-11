@@ -1,0 +1,83 @@
+# @package _global_
+
+defaults:
+  - legged_base
+
+# 站立平衡环境配置
+env:
+  _target_: humanoidverse.envs.motion_tracking.motion_tracking.LeggedRobotMotionTracking
+  config:
+    use_vec_reward: True
+    max_episode_length_s: 30  # 站立测试时间长一些
+    
+    # 站立训练模式
+    standing_mode: True
+    reference_motion_file: null  # 将使用静态站立参考
+    
+    # 终止条件 - 更严格的稳定性要求
+    termination:
+      terminate_by_contact: False
+      terminate_by_gravity: True        # 重力投影检查
+      terminate_by_low_height: True     # 高度检查
+      terminate_when_motion_end: False  # 不因运动结束而终止
+      terminate_when_motion_far: False  # 不因运动偏离而终止
+      terminate_when_close_to_dof_pos_limit: True
+      terminate_when_close_to_dof_vel_limit: True
+      terminate_when_close_to_torque_limit: True
+      
+    # 站立特定终止条件
+    standing_termination:
+      terminate_by_tilt: True           # 倾斜角度过大
+      terminate_by_drift: True          # 位置漂移过大
+      terminate_by_height_drop: True    # 高度下降过多
+      
+    termination_scales:
+      termination_min_base_height: 0.65     # G1最小高度约0.7m
+      termination_max_tilt_angle: 0.35      # 约20度最大倾斜
+      termination_max_drift_distance: 0.5   # 最大漂移距离
+      termination_max_height_drop: 0.15     # 最大高度下降
+      termination_gravity_x: 0.7            # 重力投影阈值
+      termination_gravity_y: 0.7
+      termination_close_to_dof_pos_limit: 0.95
+      termination_close_to_dof_vel_limit: 0.95
+      termination_close_to_torque_limit: 0.95
+    
+    # 站立初始化
+    standing_init:
+      use_default_pose: True
+      add_noise: True
+      noise_scale:
+        dof_pos: 0.05      # 关节位置噪声
+        dof_vel: 0.1       # 关节速度噪声
+        base_pos: 0.02     # 基座位置噪声
+        base_rot: 5.0      # 基座旋转噪声(度)
+        
+    # 扰动测试
+    disturbance_test:
+      enable: True
+      push_interval: [5.0, 10.0]  # 推力间隔时间
+      push_force: [50.0, 150.0]   # 推力大小范围
+      push_duration: 0.2          # 推力持续时间
+      
+    # 不重采样运动
+    resample_motion_when_training: False
+    
+    # 初始化噪声
+    init_noise_scale: 
+      dof_pos: 0.05
+      dof_vel: 0.1
+      root_pos: 0.02
+      root_rot: 5.0  # degree
+      root_vel: 0.0
+      root_ang_vel: 0.0
+
+# 全局参数
+log_task_name: standing_balance
+
+eval_overrides:
+  env:
+    config: 
+      max_episode_length_s: 60
+      disturbance_test:
+        enable: True
+        push_force: [100.0, 200.0]  # 评估时使用更大推力 

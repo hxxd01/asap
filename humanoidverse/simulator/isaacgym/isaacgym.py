@@ -153,6 +153,7 @@ class IsaacGym(BaseSimulator):
         self.num_dof, self.num_bodies, self.dof_names, self.body_names = self._setup_robot_props_when_env_created()
         
         # assert if  aligns with config
+        
         assert self.num_dof == len(self.robot_config.dof_names), "Number of DOFs must be equal to number of actions"
         assert self.num_bodies == len(self.robot_config.body_names), "Number of bodies must be equal to number of body names"
         assert self.dof_names == self.robot_config.dof_names, "DOF names must match the config"
@@ -252,6 +253,8 @@ class IsaacGym(BaseSimulator):
         self.robot_handles.append(robot_handle)
 
     def _process_rigid_shape_props(self, props, env_id):
+        
+
         """ Callback allowing to store/change/randomize the rigid shape properties of each environment.
             Called During environment creation.
             Base behavior: randomizes the friction of each environment
@@ -330,6 +333,64 @@ class IsaacGym(BaseSimulator):
         return props
 
     def _process_rigid_body_props(self, props, env_id):
+        def _perturb_inertia(inertia, rand_range):
+            """
+            Perturbs the inertia matrix while ensuring it remains symmetric and positive definite.
+
+            Args:
+                inertia (gymapi.Matrix3): Original inertia matrix.
+                rand_range (tuple): Range for random perturbation.
+
+            Returns:
+                gymapi.Matrix3: Perturbed inertia matrix.
+                gymapi.Matrix3: Inverse of the perturbed inertia matrix.
+            """
+            # Convert gymapi.Matrix3 to numpy array
+            np_mat = np.array([[inertia.x.x, inertia.x.y, inertia.x.z],
+                               [inertia.y.x, inertia.y.y, inertia.y.z],
+                               [inertia.z.x, inertia.z.y, inertia.z.z]])
+
+            # Ensure symmetry
+            np_mat = (np_mat + np_mat.T) / 2
+
+            try:
+                # Perform Cholesky decomposition
+                # M = L @ L.T
+                L = np.linalg.cholesky(np_mat)
+            except np.linalg.LinAlgError:
+                # If decomposition fails, add a larger value to the diagonal and retry
+                np_mat += np.eye(3) * 1e-8
+                L = np.linalg.cholesky(np_mat)
+
+            # Add random perturbation to the Cholesky factor
+            perturbation = np.exp(np.random.uniform(np.log(rand_range[0]), np.log(rand_range[1]), size=L.shape))
+            # perturbation = np.random.uniform(rand_range[0], rand_range[1], size=L.shape)
+            L_perturbed = L * perturbation
+
+            # Reconstruct the perturbed positive definite matrix
+            new_inertia_matrix = np.dot(L_perturbed, L_perturbed.T)
+
+            # Compute the inverse of the perturbed inertia matrix
+            inverse_inertia_matrix = np.linalg.inv(new_inertia_matrix)
+
+            # Convert back to gymapi.Matrix3
+            perturbed_inertia = gymapi.Mat33()
+            perturbed_inertia.x.x, perturbed_inertia.x.y, perturbed_inertia.x.z = new_inertia_matrix[0]
+            perturbed_inertia.y.x, perturbed_inertia.y.y, perturbed_inertia.y.z = new_inertia_matrix[1]
+            perturbed_inertia.z.x, perturbed_inertia.z.y, perturbed_inertia.z.z = new_inertia_matrix[2]
+
+            inverse_inertia = gymapi.Mat33()
+            inverse_inertia.x.x, inverse_inertia.x.y, inverse_inertia.x.z = inverse_inertia_matrix[0]
+            inverse_inertia.y.x, inverse_inertia.y.y, inverse_inertia.y.z = inverse_inertia_matrix[1]
+            inverse_inertia.z.x, inverse_inertia.z.y, inverse_inertia.z.z = inverse_inertia_matrix[2]
+
+            return perturbed_inertia, inverse_inertia
+        if env_id<3:
+            sum = 0
+            for i, p in enumerate(props):
+                sum += p.mass
+                logger.debug(f"Mass of body {i}: {p.mass} (before randomization)")
+            logger.debug(f"Total mass {sum} (before randomization)")
         if env_id<3:
             sum = 0
             for i, p in enumerate(props):
@@ -359,6 +420,25 @@ class IsaacGym(BaseSimulator):
             props[torso_index].com.x += com_x_bias
             props[torso_index].com.y += com_y_bias
             props[torso_index].com.z += com_z_bias
+        # randomize link com
+        if 'randomize_link_com' in self.env_config.domain_rand and self.env_config.domain_rand.randomize_link_com:
+            if env_id < 3:
+                logger.debug("randomizing link com")
+            for i, body_name in enumerate(self.env_config.domain_rand.randomize_link_body_names):
+                body_index = self._body_list.index(body_name)
+                assert body_index != -1
+
+                com_x_bias = np.random.uniform(self.env_config.domain_rand.link_com_range.x[0], self.env_config.domain_rand.link_com_range.x[1])
+                com_y_bias = np.random.uniform(self.env_config.domain_rand.link_com_range.y[0], self.env_config.domain_rand.link_com_range.y[1])
+                com_z_bias = np.random.uniform(self.env_config.domain_rand.link_com_range.z[0], self.env_config.domain_rand.link_com_range.z[1])
+
+                props[body_index].com.x += com_x_bias
+                props[body_index].com.y += com_y_bias
+                props[body_index].com.z += com_z_bias
+
+                # self._link_com_bias[env_id, i, 0] += com_x_bias
+                # self._link_com_bias[env_id, i, 1] += com_y_bias
+                # self._link_com_bias[env_id, i, 2] += com_z_bias
 
         # randomize link mass
         if self.env_config.domain_rand.randomize_link_mass:
@@ -374,6 +454,31 @@ class IsaacGym(BaseSimulator):
 
                 self._link_mass_scale[env_id, i] *= mass_scale
 
+
+        # randomize link inertia
+        if 'randomize_link_inertia' in self.env_config.domain_rand and self.env_config.domain_rand.randomize_link_inertia:
+            for i, body_name in enumerate(self.env_config.domain_rand.randomize_link_inertia_names):
+                body_index = self._body_list.index(body_name)
+                assert body_index != -1
+
+                props[body_index].inertia, props[body_index].invInertia = _perturb_inertia(props[body_index].inertia, self.env_config.domain_rand.link_inertia_range)
+                
+        if 'heavy_upper' in self.env_config.domain_rand and self.env_config.domain_rand.heavy_upper.enable:
+            logger.debug("randomizing heavy upper")
+            # print("Heavy Upper! ")
+            for i, body_name in enumerate(self.env_config.domain_rand.heavy_upper.body_names):
+                body_index = self._body_list.index(body_name)
+                assert body_index != -1
+
+                props[body_index].mass *= self.env_config.domain_rand.heavy_upper.ratio
+                for axis1 in ['x', 'y', 'z']:
+                    for axis2 in ['x', 'y', 'z']:
+                        ixx = getattr(getattr(props[body_index].inertia, axis1), axis2)
+                        ixx *= self.env_config.domain_rand.heavy_upper.ratio
+                        setattr(getattr(props[body_index].inertia, axis1), axis2, ixx)
+                        ixx = getattr(getattr(props[body_index].invInertia, axis1), axis2)
+                        ixx /= self.env_config.domain_rand.heavy_upper.ratio
+                        setattr(getattr(props[body_index].invInertia, axis1), axis2, ixx)
         # randomize base mass
         if self.env_config.domain_rand.randomize_base_mass:
             rng = self.env_config.domain_rand.added_mass_range

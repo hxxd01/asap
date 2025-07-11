@@ -23,10 +23,9 @@ obs:
       #actions,
       #ref_motion_phase,
       #history_delta_actor,
-      z_actions,  # 当前动作 23
       # dif_local_rigid_body_pos,
       # local_ref_rigid_body_pos,
-
+      z_actions
     ]
     critic_obs: [
       base_lin_vel,

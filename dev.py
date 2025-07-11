@@ -2,7 +2,7 @@ import joblib
 import numpy as np
 
 # 1. 读取原始pkl
-data = joblib.load('/home/harry/Desktop/ASAP1/asap_mujoco_sim/mujoco_motion_600.pkl')
+data = joblib.load('/home/harry/Desktop/ASAP1/asap_mujoco_sim/sick43000.pkl')
 motion = data['motion0']
 
 # 2. 取出terminate信号
@@ -35,5 +35,5 @@ split_data = {}
 for i, ep in enumerate(episodes[1:-1]):#跳过第0段和最后一段
     split_data[f'motion{i}'] = ep
 
-joblib.dump(split_data, 'mujoco_motion600_1.pkl')
+joblib.dump(split_data, 'horse_mujoco43000.pkl')
 print("已保存为 your_motion_file_split.pkl")

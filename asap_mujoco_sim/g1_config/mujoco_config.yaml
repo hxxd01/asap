@@ -23,32 +23,44 @@
 #12
 #/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_180037-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_400.onnx:
 #"/home/harry/Desktop/ASAP1/logs/MotionTracking/20250627_141938-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_300.onnx"
-policy_path: "/home/harry/Desktop/ASAP1/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_19900.onnx"
-cycle_time: 3.97
+policy_path: "/home/harry/Desktop/ASAP1/logs/MotionTracking/20250709_142516-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/exported/model_58000.onnx"
+# cycle_time: 5.97
+cycle_time: 3.97 #C罗
+#cycle_time: 7 #扎马步
+#cycle_time: 5.833 #Hooks_punch
 
 xml_path: "g1_urdf/g1_29dof_anneal_23dof.xml"
 
-render: False
+render: True # 临时关闭渲染，避免SSH环境中的GLFW窗口问题
 num_single_obs: 76
-simulation_dt: 0.005 #0.001
+simulation_dt: 0.005 #0.001A
 simulation_duration: 20
+
 control_decimation: 4 #20
 frame_stack: 4
-episode_steps: 160
-use_noise: True
-total_steps: 600
+# episode_steps: 199  # 3.97秒 / (0.005 * 4)秒 = 198.5 ≈ 199步
+# episode_steps: 350  # 扎马步: 7.000秒 / (0.005 * 4)秒 = 350步
+episode_steps: 292  # Hooks_punch: 5.833秒 / (0.005 * 4)秒 = 292步
 
+
+use_noise: true  # 🔧 关闭噪声，确保动作一致性
+# total_steps: 84000  # 86个完整回合 (350 × 86 = 30100)
+total_steps: 70080  # 86个完整回合 (350 × 86 = 30100)
+
+# 原始微屈配置
 default_dof_pos: [-0.1, 0.0, 0.0, 0.3, -0.2, 0,
                  -0.1, 0.0, 0.0, 0.3, -0.2, 0,
-                  0.0, 0.0, 0.0,
+                 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0,
-                  0.0, 0.0, 0.0, 0.0]
+                0.0, 0.0, 0.0, 0.0]
+init_pos:   [-0.1, 0.0, 0.0, 0.3, -0.2, 0,
+                 -0.1, 0.0, 0.0, 0.3, -0.2, 0,
+                 0.0, 0.0, 0.0,
+                   0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0]
 
-#default_dof_pos: [ 0.0, 0.0, 0.0, 0, 0, 0,
-#                      0, 0.0, 0.0, 0, 0, 0,
-#                      0.0, 0.0, 0.0,
-#                     0.0, 0.0, 0.0, 0.0,
-#                     0.0, 0.0, 0.0, 0.0]
+
+
 
 obs_scale_base_ang_vel: 0.25
 obs_scale_dof_pos: 1.0
@@ -56,25 +68,48 @@ obs_scale_dof_vel: 0.05
 obs_scale_gvec: 1.0
 obs_scale_refmotion: 1.0
 obs_scale_hist: 1.0
-
+default_joint_angles:
+      left_hip_pitch_joint: -0.1
+      left_hip_roll_joint: 0.0
+      left_hip_yaw_joint: 0.0
+      left_knee_joint: 0.3
+      left_ankle_pitch_joint: -0.2
+      left_ankle_roll_joint: 0.0
+      right_hip_pitch_joint: -0.1
+      right_hip_roll_joint: 0.0
+      right_hip_yaw_joint: 0.0
+      right_knee_joint: 0.3
+      right_ankle_pitch_joint: -0.2
+      right_ankle_roll_joint: 0.0
+      waist_yaw_joint: 0.0
+      waist_roll_joint: 0.0
+      waist_pitch_joint: 0.0
+      left_shoulder_pitch_joint: 0.2
+      left_shoulder_roll_joint: 0.2
+      left_shoulder_yaw_joint: 0.0
+      left_elbow_joint: 0.9
+      right_shoulder_pitch_joint: 0.2
+      right_shoulder_roll_joint: -0.2
+      right_shoulder_yaw_joint: 0.0
+      right_elbow_joint: 0.9
 
 num_actions: 23
 clip_observations: 100
 clip_actions: 100
 action_scale: 0.25
 
-kps: [100, 100, 100, 200, 20, 20,   
-      100, 100, 100, 200, 20, 20,   
-      400,400,400,  
-      90,60,20,60,  
-      90,60,20,60   
+kps: [100, 100, 100, 200, 20, 20,
+      100, 100, 100, 200, 20, 20,
+      400,400,400,
+      90,60,20,60,
+      90,60,20,60
       ]
 
-kds: [2.5, 2.5, 2.5, 5.0, 0.2, 0.1,  
+kds: [2.5, 2.5, 2.5, 5.0, 0.2, 0.1,
       2.5, 2.5, 2.5, 5.0, 0.2, 0.1,
       5.0, 5.0, 5.0,
       2.0, 1.0, 0.4, 1.0,
-      2.0, 1.0, 0.4, 1.0]
+     2.0, 1.0, 0.4, 1.0]
  
 
 tau_limit: [88, 88, 88, 139, 50, 50,
@@ -82,5 +117,23 @@ tau_limit: [88, 88, 88, 139, 50, 50,
             88, 50, 50,
             25, 25, 25, 25,
             25, 25, 25, 25]
+
+# ========================================
+# Termination 配置 - 防止采集无效轨迹
+# ========================================
+use_termination: True  # 是否启用termination机制
+
+# 重力投影termination（主要条件）
+# 当机器人倒地时，重力在x/y方向的投影会超过阈值
+termination_gravity_x: 0.85  # x方向重力投影阈值 (0.8 ≈ 36度倾斜)
+termination_gravity_y: 0.85  # y方向重力投影阈值 (0.8 ≈ 36度倾斜)
+
+# 基座高度termination（辅助条件） 
+# # 机器人蹲下或倒地时基座高度会明显降低
+# termination_min_height: 0.3  # 最小基座高度(米)，低于此高度则终止
+
+# 扭矩过大termination（可选条件）
+# 关节扭矩接近限制时可能表明机器人状态异常
+# termination_max_torque_ratio: 0.95  # 扭矩与限制的最大比值 (0.95 = 95%)
 
  

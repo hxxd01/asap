@@ -50,6 +50,7 @@ domain_rand:
   package_loss_range: [1, 10] # dt = 0.02s, delay for 0.02s - 0.2s
   package_loss_interval_s : 2
 
+  use_rao : False
 
   born_offset : False
   born_offset_curriculum: False

@@ -1,41 +1,44 @@
 # @package _global_
 
 domain_rand:
-  # push robots
+  # push robots - 按论文设置：interval=10s, v_xy=0.5 m/s
   push_robots : True
-  push_interval_s : [5, 10]
-  max_push_vel_xy : 1.0
+  push_interval_s : [9, 10]  # 论文中是10s间隔，这里设为[10,11)避免相等
+  max_push_vel_xy : 0.5       # 论文中是0.5 m/s
 
-  # base com
-  randomize_base_com : True
-  base_com_range:
-    x : [-0.1., 0.1.]
-    y : [-0.1., 0.1.]
-    z : [-0.1, 0.1]
+  # base com - 论文中没有提到，注释掉
+  # randomize_base_com : True
+  # base_com_range:
+  #   x : [-0.1., 0.1.]
+  #   y : [-0.1., 0.1.]
+  #   z : [-0.1, 0.1]
+  randomize_base_com : False
 
-  # link mass
-  randomize_link_mass : True
-  link_mass_range : [0.8, 1.2]
+  # link mass - 论文中没有提到，注释掉
+  # randomize_link_mass : True
+  # link_mass_range : [0.8, 1.2]
+  randomize_link_mass : False
 
-  # pd gain
+  # pd gain - 按论文设置：U(0.925, 1.05) × default
   randomize_pd_gain : True
-  kp_range : [0.75, 1.25]
-  kd_range : [0.75, 1.25]
+  kp_range : [0.925, 1.05]
+  kd_range : [1.0, 1.0] 
 
-  # friction
+  # friction - 按论文设置：U(0.2, 1.1)
   randomize_friction : True
-  friction_range : [0.5, 1.25]
+  friction_range : [0.2, 1.1]
 
-  # base mass
+  # base mass - 论文中没有提到，保持关闭
   randomize_base_mass : False
 
-  # rfi
-  randomize_torque_rfi : True
-  rfi_lim : 0.1
-  randomize_rfi_lim : True
-  rfi_lim_range : [0.5, 1.5]
+  # rfi - 论文中没有提到，注释掉
+  # randomize_torque_rfi : True
+  # rfi_lim : 0.1
+  # randomize_rfi_lim : True
+  # rfi_lim_range : [0.5, 1.5]
+  randomize_torque_rfi : False
+  randomize_rfi_lim : False
 
-
-  # control delay
+  # control delay - 按论文设置：U(20, 40)ms
   randomize_ctrl_delay : True
-  ctrl_delay_step_range : [0, 2] # integer max real delay is 90ms
+  ctrl_delay_step_range : [1, 2] # 20ms-40ms，每步20ms，所以1-2步对应20-40ms

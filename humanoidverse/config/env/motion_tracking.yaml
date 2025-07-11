@@ -7,6 +7,7 @@ defaults:
 env:
   _target_: humanoidverse.envs.motion_tracking.motion_tracking.LeggedRobotMotionTracking
   config:
+    use_vec_reward: True
     max_episode_length_s: 20
     termination:
       terminate_by_contact: False

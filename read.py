@@ -77,7 +77,7 @@ def main_analyze(pkl_path):
         print(f"加载文件失败: {e}")
 
 if __name__ == "__main__":
-    pkl_file_to_analyze = "/home/harry/Desktop/ASAP1/mujoco_motion480.pkl"
+    pkl_file_to_analyze = "/home/harry/Desktop/PBHC/example/motion_data/Hooks_punch_firstframe_pause2.0s.pkl"
     main_analyze(pkl_file_to_analyze)
 #/home/harry/Desktop/ASAP1/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/motions/G19900 gene430_.pkl
 

@@ -33,7 +33,11 @@ rewards:
       limits_torque: -0.1  #  Torque limits
       termination: -200   #  Termination
       # feet_max_height_for_this_air: -100.0
-
+  adaptive_tracking_sigma:
+    enable: true
+    alpha: 0.001
+    type: origin
+    scale: 1.0
 
   teleop_body_pos_lowerbody_weight : 0.5
   teleop_body_pos_upperbody_weight : 1.0

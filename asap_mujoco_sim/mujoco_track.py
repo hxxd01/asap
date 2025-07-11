@@ -8,44 +8,56 @@ from scipy.spatial.transform import Rotation as R
 from types import SimpleNamespace
 import xml.etree.ElementTree as ET
 import torch
+import pickle
+
+
 def read_conf(config_file):
     cfg = SimpleNamespace()
-    with open(config_file, "r") as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
+    with open(config_file, 'r') as f:
+        config = yaml.safe_load(f)
+
+    cfg.policy_path = config["policy_path"]
+    cfg.cycle_time = config["cycle_time"]
+    cfg.xml_path = config["xml_path"]
     cfg.num_single_obs = config["num_single_obs"]
     cfg.simulation_dt = config["simulation_dt"]
-    cfg.cycle_time = config["cycle_time"]
+    cfg.simulation_duration = config["simulation_duration"]
+    cfg.control_decimation = config["control_decimation"]
     cfg.frame_stack = config["frame_stack"]
-    cfg.default_dof_pos = np.array(config["default_dof_pos"], dtype=np.float32)
+    cfg.episode_steps = config["episode_steps"]
+    cfg.total_steps = config["total_steps"]
+    cfg.default_dof_pos = config["default_dof_pos"]
     cfg.obs_scale_base_ang_vel = config["obs_scale_base_ang_vel"]
     cfg.obs_scale_dof_pos = config["obs_scale_dof_pos"]
     cfg.obs_scale_dof_vel = config["obs_scale_dof_vel"]
     cfg.obs_scale_gvec = config["obs_scale_gvec"]
     cfg.obs_scale_refmotion = config["obs_scale_refmotion"]
     cfg.obs_scale_hist = config["obs_scale_hist"]
-    cfg.clip_observations = config["clip_observations"]
-    cfg.kps = np.array(config["kps"], dtype=np.float32)
-    cfg.kds = np.array(config["kds"], dtype=np.float32)
-    cfg.xml_path = config["xml_path"]
     cfg.num_actions = config["num_actions"]
-    cfg.policy_path = config["policy_path"]
-    cfg.simulation_duration = config["simulation_duration"]
-    cfg.control_decimation = config["control_decimation"]
+    cfg.clip_observations = config["clip_observations"]
     cfg.clip_actions = config["clip_actions"]
     cfg.action_scale = config["action_scale"]
-    cfg.episode_steps = config["episode_steps"]
-    cfg.total_steps = config["total_steps"]
-    cfg.tau_limit = np.array(config["tau_limit"], dtype=np.float32)
-    cfg.render=config["render"]
-    cfg.use_noise=config["use_noise"]
+    cfg.kps = config["kps"]
+    cfg.kds = config["kds"]
+    cfg.tau_limit = config["tau_limit"]
+    cfg.render = config["render"]
+    cfg.use_noise = config["use_noise"]
+    cfg.init_pos=config["init_pos"]
+
+    # 添加termination相关配置
+    cfg.use_termination = config.get("use_termination", True)
+    cfg.termination_gravity_x = config.get("termination_gravity_x", 0.85)
+    cfg.termination_gravity_y = config.get("termination_gravity_y", 0.85)
+
     return cfg
 
+
 def get_mujoco_data(data):
-    mujoco_data={}
+    mujoco_data = {}
     q = data.qpos.astype(np.double)
     dq = data.qvel.astype(np.double)
     quat = np.array([q[4], q[5], q[6], q[3]])
-    #v = r.apply(data.qvel[:3], inverse=True).astype(np.double)  # 把 base 的线速度（data.qvel[:3]）从全局坐标系变换到base局部坐标系（用四元数逆变换）。
+    # v = r.apply(data.qvel[:3], inverse=True).astype(np.double)  # 把 base 的线速度（data.qvel[:3]）从全局坐标系变换到base局部坐标系（用四元数逆变换）。
     r = R.from_quat(quat)
     base_angvel = dq[3:6]
     gvec = r.apply(np.array([0., 0., -1.]), inverse=True).astype(np.double)
@@ -53,9 +65,14 @@ def get_mujoco_data(data):
     mujoco_data['mujoco_dof_vel'] = dq[6:]
     mujoco_data['mujoco_base_angvel'] = base_angvel
     mujoco_data['mujoco_gvec'] = gvec
+
+    # 添加基座高度信息
+    mujoco_data['base_height'] = q[2]  # z坐标作为高度
+
     return mujoco_data
 
-def get_obs(hist_obs_c,hist_dict,mujoco_data,action,counter,cfg):
+
+def get_obs(hist_obs_c, hist_dict, mujoco_data, action, counter, cfg):
     ''' obs:
     action #  23
     base_ang_vel # 3
@@ -98,41 +115,42 @@ def get_obs(hist_obs_c,hist_dict,mujoco_data,action,counter,cfg):
         noise_dof_pos = np.zeros(23)
         noise_dof_vel = np.zeros(23)
     ref_motion_phase = (counter + 1) * cfg.simulation_dt / cfg.cycle_time
-    ref_motion_phase = np.clip(ref_motion_phase,0,1)
-    num_obs_input = (cfg.frame_stack+1) * cfg.num_single_obs
+    ref_motion_phase = np.clip(ref_motion_phase, 0, 1)
+    num_obs_input = (cfg.frame_stack + 1) * cfg.num_single_obs
 
-    obs_all =  np.zeros([1,  num_obs_input], dtype=np.float32)
+    obs_all = np.zeros([1, num_obs_input], dtype=np.float32)
     obs_sigle = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
     obs_sigle[0, 0:23] = action
-    #obs_sigle[0, 23:26] = mujoco_base_angvel * cfg.obs_scale_base_ang_vel
+    # obs_sigle[0, 23:26] = mujoco_base_angvel * cfg.obs_scale_base_ang_vel
 
-    obs_sigle[0, 23:26] = (mujoco_base_angvel+noise_base_ang_vel ) *cfg.obs_scale_base_ang_vel
-    dof_pos=mujoco_dof_pos - cfg.default_dof_pos
-    obs_sigle[0, 26:49] = (dof_pos+noise_dof_pos) * cfg.obs_scale_dof_pos
-    obs_sigle[0, 49:72] = (mujoco_dof_vel+noise_dof_vel) * cfg.obs_scale_dof_vel
-    #obs_sigle[0, 72:75] = mujoco_gvec * cfg.obs_scale_gvec
-    obs_sigle[0, 72:75] = (mujoco_gvec+noise_projected_gravity ) *cfg.obs_scale_gvec
+    obs_sigle[0, 23:26] = (mujoco_base_angvel + noise_base_ang_vel) * cfg.obs_scale_base_ang_vel
+    dof_pos = mujoco_dof_pos - cfg.default_dof_pos
+    obs_sigle[0, 26:49] = (dof_pos + noise_dof_pos) * cfg.obs_scale_dof_pos
+    obs_sigle[0, 49:72] = (mujoco_dof_vel + noise_dof_vel) * cfg.obs_scale_dof_vel
+    # obs_sigle[0, 72:75] = mujoco_gvec * cfg.obs_scale_gvec
+    obs_sigle[0, 72:75] = (mujoco_gvec + noise_projected_gravity) * cfg.obs_scale_gvec
     obs_sigle[0, 75] = ref_motion_phase * cfg.obs_scale_refmotion
 
-
-    obs_all[0,0:23] = obs_sigle[0,0:23].copy()
-    obs_all[0,23:26] = obs_sigle[0,23:26].copy()
-    obs_all[0,26:49] = obs_sigle[0,26:49].copy()
-    obs_all[0,49:72] =  obs_sigle[0,49:72].copy()
+    obs_all[0, 0:23] = obs_sigle[0, 0:23].copy()
+    obs_all[0, 23:26] = obs_sigle[0, 23:26].copy()
+    obs_all[0, 26:49] = obs_sigle[0, 26:49].copy()
+    obs_all[0, 49:72] = obs_sigle[0, 49:72].copy()
     # 72:164 action;
     # 164:176 base_ang_vel
     # 176:268 dof_pos
     # 268:360 dof_vel
     # 360:372 gravity
     # 372:376 phase
-    obs_all[0,72:376] = hist_obs_c[0] * cfg.obs_scale_hist
-    obs_all[0,376:379] = obs_sigle[0,72:75].copy()
-    obs_all[0,379] = obs_sigle[0,75].copy()
+    obs_all[0, 72:376] = hist_obs_c[0] * cfg.obs_scale_hist
+    obs_all[0, 376:379] = obs_sigle[0, 72:75].copy()
+    obs_all[0, 379] = obs_sigle[0, 75].copy()
 
-    hist_obs_cat = update_hist_obs(hist_dict,obs_sigle)
+    hist_obs_cat = update_hist_obs(hist_dict, obs_sigle)
     obs_all = np.clip(obs_all, -cfg.clip_observations, cfg.clip_observations)
 
-    return obs_all,hist_obs_cat
+    return obs_all, hist_obs_cat
+
+
 def update_hist_obs(hist_dict, obs_sigle):
     '''
         history_keys = ['actions', 'base_ang_vel', 'dof_pos',
@@ -159,9 +177,11 @@ def update_hist_obs(hist_dict, obs_sigle):
     ], axis=1).astype(np.float32)
     return hist_obs
 
-def pd_control(target_pos,dof_pos, target_vel,dof_vel ,cfg):
-    torque_out = (target_pos  - dof_pos ) * cfg.kps + (target_vel - dof_vel)* cfg.kds
+
+def pd_control(target_pos, dof_pos, target_vel, dof_vel, cfg):
+    torque_out = (target_pos - dof_pos) * cfg.kps + (target_vel - dof_vel) * cfg.kds
     return torque_out
+
 
 def parse_dof_axis_from_xml(xml_path):
     tree = ET.parse(xml_path)
@@ -179,6 +199,44 @@ def parse_dof_axis_from_xml(xml_path):
             dof_axis.append(axis)
     return np.array(dof_axis, dtype=np.float32)
 
+
+def check_termination(mujoco_data, cfg, counter):
+    """
+    检查是否需要终止当前回合
+    基于重力投影和基座高度判断机器人是否倒地
+    """
+    if not cfg.use_termination:
+        return False
+
+    # 1. 重力投影判断（主要termination条件）
+    mujoco_gvec = mujoco_data["mujoco_gvec"]
+    gravity_x_violation = abs(mujoco_gvec[0]) > cfg.termination_gravity_x
+    gravity_y_violation = abs(mujoco_gvec[1]) > cfg.termination_gravity_y
+    gravity_termination = gravity_x_violation or gravity_y_violation
+
+    # # 2. 基座高度判断（辅助termination条件）
+    # base_height = mujoco_data.get("base_height", 1.0)  # 默认高度
+    # height_termination = base_height < cfg.termination_min_height
+
+    # # 3. 扭矩过大判断（可选）
+    # torque_termination = False
+    # if "torques" in mujoco_data:
+    #     torques = mujoco_data["torques"]
+    #     max_torque_ratio = np.max(np.abs(torques) / cfg.tau_limit)
+    #     torque_termination = max_torque_ratio > cfg.termination_max_torque_ratio
+
+    # 综合判断
+    should_terminate = gravity_termination
+
+    # 调试信息
+    if should_terminate:
+        print(f"[Termination] Step {counter}: "
+              f"gravity_x={mujoco_gvec[0]:.3f}(>{cfg.termination_gravity_x}), "
+              f"gravity_y={mujoco_gvec[1]:.3f}(>{cfg.termination_gravity_y})")
+
+    return should_terminate
+
+
 def run_and_save_mujoco(cfg, save_path):
     current_step = 0
     motions_for_saving = {'root_trans_offset': [], 'pose_aa': [], 'dof': [], 'root_rot': [], 'action': [], 'terminate': [], "root_lin_vel": [],
@@ -186,23 +244,26 @@ def run_and_save_mujoco(cfg, save_path):
     dt = cfg.simulation_dt * cfg.control_decimation
     dof_axis = parse_dof_axis_from_xml(cfg.xml_path)
 
+    # 添加termination统计
+    termination_stats = {
+        'gravity_terminations': 0,
+        'height_terminations': 0,
+        'torque_terminations': 0,
+        'normal_completions': 0,
+        'total_episodes': 0
+    }
 
-    while True:  #回合的循环
+    while True:  # 回合的循环
         # 回合初始化
-
         model = mujoco.MjModel.from_xml_path(cfg.xml_path)  # 从 XML 文件（通常是 .xml 或 .mjcf 格式的机器人模型文件）加载 Mujoco 物理模型，生成 model 对象。
         data = mujoco.MjData(model)  # 基于上面加载的 model，创建一个 data 对象，存储仿真过程中的所有状态（如关节位置、速度、力等）。
         model.opt.timestep = cfg.simulation_dt  # 每一步物理仿真的时间间隔。
 
-        data.qpos[-cfg.num_actions:] = cfg.default_dof_pos  # 将机器人所有关节的初始位置（qpos的最后若干个元素）设置为默认关节角度。
+        data.qpos[-cfg.num_actions:] = cfg.init_pos  # 将机器人所有关节的初始位置（qpos的最后若干个元素）设置为默认关节角度。
         mujoco.mj_step(model, data)  # 执行一次物理仿真步，确保初始状态下所有缓冲区都被正确初始化（有些仿真器需要先step一次）。
 
-
         # 初始化
-
         model.opt.timestep = cfg.simulation_dt
-
-        # base_ang_vel (qvel[3:6])
 
         # mujoco可视化设置
         if cfg.render:
@@ -212,13 +273,13 @@ def run_and_save_mujoco(cfg, save_path):
             viewer.cam.azimuth = 90  # 设置摄像机的水平旋转角度（方位角），单位为度。90度通常是侧视。
             viewer.cam.elevation = -45  # 设置摄像机的俯仰角（仰视/俯视），单位为度。-45度是从上往下看。
             viewer.cam.lookat[:] = np.array([0.0, -0.25, 0.824])  # 设置摄像机的焦点（即摄像机看向场景中的哪个点），这里是一个三维坐标。
+
         # 策略模型加载
         onnx_model_path = cfg.policy_path
         policy = onnxruntime.InferenceSession(onnx_model_path)  # 用 onnxruntime 加载 ONNX 格式的策略模型，这样后续就可以用 policy.run(...) 来进行神经网络推理
 
         # 变量初始化
         target_dof_pos = np.zeros((1, len(cfg.default_dof_pos.copy())))
-
         action = np.zeros(cfg.num_actions, dtype=np.float32)
 
         # 初始化历史观测
@@ -237,26 +298,31 @@ def run_and_save_mujoco(cfg, save_path):
         hist_obs_c = np.concatenate(hist_obs, axis=1)
         counter = 0
         terminate_flag = False
+        episode_terminated_early = False
 
-        for step in range(cfg.episode_steps*cfg.control_decimation):#回合内循环
-
+        for step in range(cfg.episode_steps * cfg.control_decimation):  # 回合内循环
             mujoco_data = get_mujoco_data(data)
-            tau = pd_control(target_dof_pos, mujoco_data["mujoco_dof_pos"],
-                            np.zeros_like(cfg.kds), mujoco_data["mujoco_dof_vel"], cfg)
 
-            tau = np.clip(tau, -cfg.tau_limit, cfg.tau_limit)
+            # 添加扭矩信息用于termination检查
+            tau = pd_control(target_dof_pos, mujoco_data["mujoco_dof_pos"],
+                             np.zeros_like(cfg.kds), mujoco_data["mujoco_dof_vel"], cfg)
+            tau_limit = np.array(cfg.tau_limit)  # 将列表转换为numpy数组
+            tau = np.clip(tau, -tau_limit, tau_limit)
+            mujoco_data['torques'] = tau
+
             data.ctrl[:] = tau
             mujoco.mj_step(model, data)
 
-
             if counter % cfg.control_decimation == 0:
-
                 current_step += 1
-                obs_buff,hist_obs_c = get_obs(hist_obs_c,hist_dict,mujoco_data,action,counter,cfg)
+                obs_buff, hist_obs_c = get_obs(hist_obs_c, hist_dict, mujoco_data, action, counter, cfg)
                 policy_input = {policy.get_inputs()[0].name: obs_buff}
                 action = policy.run(["action"], policy_input)[0]
                 action = np.clip(action, -cfg.clip_actions, cfg.clip_actions)
                 target_dof_pos = action * cfg.action_scale + cfg.default_dof_pos
+
+                # 检查termination条件（移到数据保存之前）
+                should_terminate = check_termination(mujoco_data, cfg, counter)
 
                 # 保存数据
                 q = data.qpos.astype(np.double)  # 当前仿真状态下的所有关节位置（包括base的平移和旋转）
@@ -282,6 +348,7 @@ def run_and_save_mujoco(cfg, save_path):
                 root_lin_vel = dq[:3]
                 root_ang_vel = dq[3:6]
                 dof_vel = dq[6:]
+
                 if not cfg.render:
                     motions_for_saving['root_trans_offset'].append(root_trans)  # gene[-0.38,1.16] mujoco[-0.03,0.97]
                     motions_for_saving['root_rot'].append(root_rot)  # gene[-0.89,0.94],mujoco[-0.05,1]
@@ -292,52 +359,83 @@ def run_and_save_mujoco(cfg, save_path):
                     motions_for_saving['root_lin_vel'].append(root_lin_vel)  # gene[-3.02,3.04],mujoco[-2.36,1.43]
                     motions_for_saving['root_ang_vel'].append(root_ang_vel)  # gene[-9.6,10.26],mujoco[-1.95,5.00]
                     motions_for_saving['dof_vel'].append(dof_vel)  # gene [-22,13],mujoco[-5,9]
-                    motion_times = counter  * cfg.simulation_dt
-                    #print(motion_times)
+                    motion_times = counter * cfg.simulation_dt
+                    # print(motion_times)
                     motions_for_saving['motion_times'].append(motion_times)
                     motions_for_saving['fps'] = 1.0 / dt
                     # print(num_steps)
                     # print(1.0 / cfg.simulation_dt)
 
-
-                    if ((current_step ) % cfg.episode_steps) == 0:
+                    # 根据termination状态设置terminate标志
+                    if should_terminate:
                         motions_for_saving['terminate'].append(True)
-
-
+                        print(f"[Early Termination] Episode terminated at step {counter}/{cfg.episode_steps}")
+                        episode_terminated_early = True
+                    elif ((current_step) % cfg.episode_steps) == 0:
+                        motions_for_saving['terminate'].append(True)
                     else:
                         motions_for_saving['terminate'].append(False)
 
                     print(f"current_step:{current_step}/total_step:{cfg.total_steps}")
+
+                # 如果需要终止，在保存数据后再break
+                if should_terminate:
+                    break
+
             counter += 1
             if cfg.render:
                 viewer.render()
+
+        # 更新统计信息
+        termination_stats['total_episodes'] += 1
+        if episode_terminated_early:
+            # 这里可以进一步细分termination原因
+            termination_stats['gravity_terminations'] += 1
+        else:
+            termination_stats['normal_completions'] += 1
 
         if current_step >= cfg.total_steps:
             break
         if cfg.render:
             viewer.close()
+
+    # 打印termination统计
+    print(f"\n[Termination Statistics]")
+    print(f"Total Episodes: {termination_stats['total_episodes']}")
+    print(f"Normal Completions: {termination_stats['normal_completions']}")
+    print(f"Early Terminations: {termination_stats['gravity_terminations']}")
+    print(f"Early Termination Rate: {termination_stats['gravity_terminations'] / termination_stats['total_episodes'] * 100:.1f}%")
+
     if not cfg.render:
         # 拼接所有list为ndarray
         result = {}
         for k in motions_for_saving:
-            arr = np.array(motions_for_saving[k])
-            if k == 'action' and arr.ndim == 3:
-                arr = arr.squeeze(1)  # (N, 1, 23) -> (N, 23)
-            if k == 'terminate':
-                arr = arr.astype(np.int64)
-            result[k] = arr.astype(np.float32) if arr.dtype == np.float64 else arr
+            if k != 'fps':  # fps is not a list
+                result[k] = np.array(motions_for_saving[k])
+        result['fps'] = motions_for_saving['fps']
 
+        # 按照期望的方式保存数据
+        save_f = open(save_path, 'wb')
+        pickle.dump(result, save_f)
+        save_f.close()
 
-        result['fps'] = float(1.0 / dt)
+        print(f"✅ Motion data saved to: {save_path}")
+        print(f"📊 Total frames saved: {len(result['motion_times'])}")
+        print(f"⏱️ Total duration: {result['motion_times'][-1]:.2f}s")
+        print(f"🎬 FPS: {result['fps']:.1f}")
 
-        final_save = {'motion0': result}
-        joblib.dump(final_save, save_path)
-        print(f"Motion data saved to {save_path}")
 
 if __name__ == '__main__':
-    current_directory = os.getcwd() 
+    from datetime import datetime
+
+    current_directory = os.getcwd()
     config_file = current_directory + "/g1_config/mujoco_config.yaml"
-    cfg = read_conf(config_file) 
-    save_path = os.path.join(current_directory, "mujoco_motion_600.pkl")
+    cfg = read_conf(config_file)
+
+    # 生成带时间戳的文件名，避免覆盖
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_path = os.path.join(current_directory, f"{timestamp}_mujoco_motion_Hooks_punch.pkl")
+    print(f"数据将保存到: {save_path}")
+
     run_and_save_mujoco(cfg, save_path)
     print("-----done------")

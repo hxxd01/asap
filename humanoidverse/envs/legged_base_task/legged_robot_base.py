@@ -20,8 +20,7 @@ from humanoidverse.envs.env_utils.history_handler import HistoryHandler
 from termcolor import colored
 from humanoidverse.utils.helpers import parse_observation
 from humanoidverse.envs.env_utils.visualization import Point
-
-from loguru import logger
+from humanoidverse.envs.legged_base_task.cov import OnlineMeanCovBatch
 import copy
 
 # 设置logger
@@ -47,7 +46,9 @@ class LeggedRobotBase(BaseTask):
 
         self.base_quat = self.simulator.base_quat
         self.rpy = get_euler_xyz_in_tensor(self.base_quat)
-
+        self.delta_action_stat_counter = 0
+        self.delta_action_stat_interval = 1500
+        #self.stats = OnlineMeanCovBatch(dim=23)
         # initialize some data used later on
         self._init_counters()
         self.extras = {}
@@ -99,6 +100,17 @@ class LeggedRobotBase(BaseTask):
 
         self.add_noise_currculum = self.config.obs.add_noise_currculum
         self.current_noise_curriculum_value = self.config.obs.noise_initial_value
+
+    
+
+        # if self.reset_buf.any():
+        #     breakpoint()
+
+    def _update_timeout_buf(self):
+        self.time_out_buf |= self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
+
+        # self.log_dict["terminate_by_time_out"] = self.time_out_buf.float().mean()
+        self.reset_buf_terminate_by["time_out"] = self.time_out_buf
 
     def _domain_rand_config(self):
         if self.config.domain_rand.push_robots:
@@ -195,12 +207,16 @@ class LeggedRobotBase(BaseTask):
             # reward episode sums
             self.episode_sums = {name: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
                                 for name in self.reward_scales.keys()}
+        if self.config.use_vec_reward:
+            # reward_fn_state.reward_functions = [reward_fn_state.reward_functions[0]]
+            num_rew_fn = len(self.reward_functions) + 1
+            self.rew_buf = torch.zeros(self.num_envs, num_rew_fn, dtype=torch.float, device=self.device, requires_grad=False)
 
     def set_is_evaluating(self):
         logger.info("Setting Env is evaluating")
         self.is_evaluating = True
     
-    def step(self, actor_state):
+    '''def step(self, actor_state):
         
         """ Apply actions, simulate, call self.post_physics_step()
         Args:
@@ -221,8 +237,16 @@ class LeggedRobotBase(BaseTask):
                 arr = np.stack(self.delta_action_history, axis=0)
                 # 对window维度取均值，得到每个动作维度的平均动作变化
                 mean_per_dim = arr.mean(axis=0)  # shape: (num_actions_per_env,)
+
                 # 在动作维度上取最大
                 max_mean = mean_per_dim.max()
+                self.delta_action_stat_counter += 1
+                
+                if self.delta_action_stat_counter % self.delta_action_stat_interval == 0 and len(self.delta_action_history) > 0:
+                    max_per_dim = arr.max(axis=0)  # shape: (num_actions_per_env,)
+                    min_per_dim = arr.min(axis=0)  # s
+                    for i, (min_v, max_v) in enumerate(zip(min_per_dim, max_per_dim)):
+                        print(f"动作维度 {i}: 最小值={min_v:.4f}, 最大值={max_v:.4f}")
             else:
                 max_mean = 0.0
 
@@ -233,6 +257,81 @@ class LeggedRobotBase(BaseTask):
         self._physics_step()
         self._post_physics_step()
    
+        # if self.episode_length_buf[0] == 1:
+        #     import ipdb; ipdb.set_trace()
+
+        return self.obs_buf_dict, self.rew_buf, self.reset_buf, self.extras'''
+
+    def step(self, actor_state):
+
+        """ Apply actions, simulate, call self.post_physics_step()
+        Args:
+            actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
+        """
+        actions = actor_state["actions"]
+        if "delta_actions" in actor_state :
+
+            self.delta_actions = actor_state["delta_actions"]
+            delta_actions = actor_state["delta_actions"].detach().cpu().numpy()  # shape: (num_envs, num_actions_per_env)
+            #self.stats.update(delta_actions)
+            # 先对所有环境取均值，得到 shape: (num_actions_per_env,)
+            delta_actions_mean = delta_actions.mean(axis=0)
+            self.delta_action_history.append(delta_actions_mean)
+            if len(self.delta_action_history) > self.delta_action_history_max_window:
+                self.delta_action_history.pop(0)
+            arr = np.stack(self.delta_action_history, axis=0)
+            mean_per_dim = arr.mean(axis=0)  # shape: (num_actions_per_env,)
+            self.delta_action_stat_counter += 1
+            # 在动作维度上取最大
+            max_mean = mean_per_dim.max()
+            if self.delta_action_stat_counter % self.delta_action_stat_interval == 0:
+                # shape: (window, num_actions_per_env)
+                arr = np.stack(self.delta_action_history, axis=0)
+                # 对window维度取均值，得到每个动作维度的平均动作变化
+                
+                
+                joint_names = [
+                    ("left_hip_pitch_joint", "左髋屈伸关节"),
+                    ("left_hip_roll_joint", "左髋侧摆关节"),
+                    ("left_hip_yaw_joint", "左髋旋转关节"),
+                    ("left_knee_joint", "左膝关节"),
+                    ("left_ankle_pitch_joint", "左踝屈伸关节"),
+                    ("left_ankle_roll_joint", "左踝侧摆关节"),
+                    ("right_hip_pitch_joint", "右髋屈伸关节"),
+                    ("right_hip_roll_joint", "右髋侧摆关节"),
+                    ("right_hip_yaw_joint", "右髋旋转关节"),
+                    ("right_knee_joint", "右膝关节"),
+                    ("right_ankle_pitch_joint", "右踝屈伸关节"),
+                    ("right_ankle_roll_joint", "右踝侧摆关节"),
+                    ("waist_yaw_joint", "腰部旋转关节"),
+                    ("waist_roll_joint", "腰部侧摆关节"),
+                    ("waist_pitch_joint", "腰部屈伸关节"),
+                    ("left_shoulder_pitch_joint", "左肩屈伸关节"),
+                    ("left_shoulder_roll_joint", "左肩侧摆关节"),
+                    ("left_shoulder_yaw_joint", "左肩旋转关节"),
+                    ("left_elbow_joint", "左肘关节"),
+                    ("right_shoulder_pitch_joint", "右肩屈伸关节"),
+                    ("right_shoulder_roll_joint", "右肩侧摆关节"),
+                    ("right_shoulder_yaw_joint", "右肩旋转关节"),
+                    ("right_elbow_joint", "右肘关节"),
+                ]
+                
+                max_per_dim = arr.max(axis=0)  # shape: (num_actions_per_env,)
+                min_per_dim = arr.min(axis=0)  # s
+                # 关节编号到中英文名称的映射
+                for i, (min_v, max_v) in enumerate(zip(min_per_dim, max_per_dim)):
+                    en, zh = joint_names[i]
+                    print(f"动作维度 {i}: {en}（{zh}） 最小值={min_v:.4f}, 最大值={max_v:.4f}")
+                    #self.stats.save("action_stats.npz")
+           
+
+            self.log_dict["delta_action_history_max_mean"] = torch.tensor(max_mean, dtype=torch.float32)
+        # print(self.delta_actions)
+        # actions *= 0.0
+        self._pre_physics_step(actions)
+        self._physics_step()
+        self._post_physics_step()
+
         # if self.episode_length_buf[0] == 1:
         #     import ipdb; ipdb.set_trace()
 
@@ -436,6 +535,7 @@ class LeggedRobotBase(BaseTask):
             self.extras["episode"]['rew_' + key] = torch.mean(self.episode_sums[key][env_ids]) / self.max_episode_length_s
             self.episode_sums[key][env_ids] = 0.
         self.extras["time_outs"] = self.time_out_buf
+        self.extras["episode"]["end_epis_length"] = self.last_episode_length_buf[env_ids]
         # self._refresh_sim_tensors()
 
 
@@ -527,7 +627,7 @@ class LeggedRobotBase(BaseTask):
             "feet_air_max_height": copy.deepcopy(self.feet_air_max_height[env_ids]),
         }
 
-    def _compute_reward(self):
+    '''def _compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
             adds each terms to the episode sums and to the total reward
@@ -565,6 +665,55 @@ class LeggedRobotBase(BaseTask):
         if self.use_reward_limits_torque_curriculum:
             self.log_dict["soft_torque_curriculum_value"] = torch.tensor(self.soft_torque_curriculum_value, dtype=torch.float)
         
+        if self.add_noise_currculum:
+            self.log_dict["current_noise_curriculum_value"] = torch.tensor(self.current_noise_curriculum_value, dtype=torch.float)'''
+
+    def _compute_reward(self):
+        """ Compute rewards
+            Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
+            adds each terms to the episode sums and to the total reward
+        """
+        self.rew_buf[:] = 0.
+        for i in range(len(self.reward_functions)):
+            name = self.reward_names[i]
+            rew = self.reward_functions[i]() * self.reward_scales[name]
+            try:
+                assert rew.shape[0] == self.num_envs
+            except:
+                import ipdb;
+                ipdb.set_trace()
+            # penalty curriculum
+            if name in self.config.rewards.reward_penalty_reward_names:
+                if self.config.rewards.reward_penalty_curriculum:
+                    rew *= self.reward_penalty_scale
+            if self.config.use_vec_reward:
+                self.rew_buf[:, i] += rew
+            else:
+                self.rew_buf += rew
+            self.episode_sums[name] += rew
+        if self.config.rewards.only_positive_rewards:
+            self.rew_buf[:] = torch.clip(self.rew_buf[:], min=0.)
+        # add termination reward after clipping
+        if "termination" in self.reward_scales:
+            rew = self._reward_termination() * self.reward_scales["termination"]
+
+            if self.config.use_vec_reward:
+                self.rew_buf[:, i] += rew
+            else:
+                self.rew_buf += rew
+            self.episode_sums["termination"] += rew
+
+        if self.use_reward_penalty_curriculum:
+            self.log_dict["penalty_scale"] = torch.tensor(self.reward_penalty_scale, dtype=torch.float)
+            self.log_dict["average_episode_length"] = self.average_episode_length
+
+        if self.use_reward_limits_dof_pos_curriculum:
+            self.log_dict["soft_dof_pos_curriculum_value"] = torch.tensor(self.soft_dof_pos_curriculum_value, dtype=torch.float)
+        if self.use_reward_limits_dof_vel_curriculum:
+            self.log_dict["soft_dof_vel_curriculum_value"] = torch.tensor(self.soft_dof_vel_curriculum_value, dtype=torch.float)
+        if self.use_reward_limits_torque_curriculum:
+            self.log_dict["soft_torque_curriculum_value"] = torch.tensor(self.soft_torque_curriculum_value, dtype=torch.float)
+
         if self.add_noise_currculum:
             self.log_dict["current_noise_curriculum_value"] = torch.tensor(self.current_noise_curriculum_value, dtype=torch.float)
     def _compute_observations(self):
@@ -628,6 +777,17 @@ class LeggedRobotBase(BaseTask):
         
         if self.config.domain_rand.randomize_torque_rfi:
             torques = torques + (torch.rand_like(torques)*2.-1.) * self.config.domain_rand.rfi_lim * self._rfi_lim_scale * self.torque_limits
+        if 'parallel_serial_tau' in self.config.domain_rand and self.config.domain_rand.parallel_serial_tau.enable:
+            # torques = torques * self._tau_scale
+
+            torques[:, self.config.domain_rand.parallel_serial_tau.joint_idx] += (
+                    self.config.domain_rand.parallel_serial_tau.rfi_lim *
+                    self.torque_limits[self.config.domain_rand.parallel_serial_tau.joint_idx] *
+                    torch.randn((self.num_envs, len(self.config.domain_rand.parallel_serial_tau.joint_idx)), device=self.device))
+            # raise NotImplementedError("Parallel serial tau is not implemented")
+
+        if self.config.domain_rand.use_rao:
+            torques = torques + self._rao_scale * self.torque_limits
         
         if self.config.robot.control.clip_torques:
             return torch.clip(torques, -self.torque_limits, self.torque_limits)
@@ -844,8 +1004,19 @@ class LeggedRobotBase(BaseTask):
             return
         if self.config.domain_rand.randomize_pd_gain:
             self._kp_scale[env_ids] = torch_rand_float(self.config.domain_rand.kp_range[0], self.config.domain_rand.kp_range[1], (len(env_ids), self.num_dofs), device=self.device)
+
             self._kd_scale[env_ids] = torch_rand_float(self.config.domain_rand.kd_range[0], self.config.domain_rand.kd_range[1], (len(env_ids), self.num_dofs), device=self.device)
-    
+
+        if self.config.domain_rand.use_rao:
+            self._rao_scale[env_ids] = torch_rand_float(-self.config.domain_rand.rao_lim, self.config.domain_rand.rao_lim, (len(env_ids), self.num_dofs),
+                                                        device=self.device)
+
+        if 'parallel_serial_tau' in self.config.domain_rand and self.config.domain_rand.parallel_serial_tau.enable:
+            # self._rfi_lim_scale[env_ids, self.config.domain_rand.parallel_serial_tau.joint_idx] += self.config.domain_rand.parallel_serial_tau.rfi_lim
+            self._rao_scale[
+                env_ids[:, None], self.config.domain_rand.parallel_serial_tau.joint_idx] += self.config.domain_rand.parallel_serial_tau.rao_lim * torch.randn(
+                (len(env_ids), len(self.config.domain_rand.parallel_serial_tau.joint_idx)), device=self.device)
+
         if self.config.domain_rand.randomize_rfi_lim:
             self._rfi_lim_scale[env_ids] = torch_rand_float(self.config.domain_rand.rfi_lim_range[0], self.config.domain_rand.rfi_lim_range[1], (len(env_ids), self.num_dofs), device=self.device)
 
@@ -856,7 +1027,6 @@ class LeggedRobotBase(BaseTask):
             self.action_delay_idx[env_ids] = torch.randint(self.config.domain_rand.ctrl_delay_step_range[0], 
                                             self.config.domain_rand.ctrl_delay_step_range[1]+1, (len(env_ids),), device=self.device, requires_grad=False)
 
-
     def _push_robots(self, env_ids):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
         """
@@ -866,7 +1036,11 @@ class LeggedRobotBase(BaseTask):
         max_vel = self.config.domain_rand.max_push_vel_xy
         self.push_robot_vel_buf[env_ids] = torch_rand_float(-max_vel, max_vel, (len(env_ids), 2), device=str(self.device))  # lin vel x/y
         self.record_push_robot_vel_buf[env_ids] = self.push_robot_vel_buf[env_ids].clone()
-        self.simulator.robot_root_states[env_ids, 7:9] = self.push_robot_vel_buf[env_ids]
+
+        if '_push_fixed' in self.config.domain_rand and self.config.domain_rand._push_fixed:
+            self.simulator.robot_root_states[env_ids, 7:9] += self.push_robot_vel_buf[env_ids]
+        else:
+            self.simulator.robot_root_states[env_ids, 7:9] = self.push_robot_vel_buf[env_ids]
         # self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.simulator.all_root_states))
 
 
@@ -986,3 +1160,25 @@ class LeggedRobotBase(BaseTask):
     
     def _get_obs_actions(self,):
         return self.actions
+
+    @property
+    def num_rew_fn(self):
+        return len(self.reward_functions) + 1 if self.config.use_vec_reward else 1
+
+    #def _get_obs_dr_base_com(self):  #机器人基座（躯干）质心位置的随机偏移量
+        #return self.simulator._base_com_bias
+
+    #def _get_obs_dr_link_mass(self):  #
+        #return self.simulator._link_mass_scale
+
+    def _get_obs_dr_friction(self):
+        return self.simulator.friction_coeffs.reshape(self.num_envs, -1)
+
+    def _get_obs_dr_kp(self):
+        return self._kp_scale
+
+    def _get_obs_dr_kd(self):
+        return self._kd_scale
+
+    def _get_obs_dr_ctrl_delay(self):
+        return self.action_delay_idx.reshape(self.num_envs, -1).float()

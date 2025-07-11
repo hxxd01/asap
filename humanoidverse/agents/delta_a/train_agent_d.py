@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-
+import torch.optim as optimim
+import numpy as np
 from humanoidverse.agents.modules.ppo_modules import PPOActor, PPOCritic
 from humanoidverse.agents.modules.data_utils import RolloutStorage
 from humanoidverse.envs.base_task.base_task import BaseTask
@@ -20,7 +20,8 @@ from rich.progress import track
 from rich.console import Console
 from rich.panel import Panel
 from rich.live import Live
-
+from humanoidverse.agents.mh_ppo.mh_ppo import MHPPO
+from humanoidverse.envs.legged_base_task.cov import OnlineMeanCovBatch
 console = Console()
 
 from humanoidverse.agents.ppo.ppo import PPO
@@ -33,7 +34,7 @@ from humanoidverse.agents.base_algo.base_algo import BaseAlgo
 from hydra.utils import instantiate
 
 # 固定delta action 模型，训练策略，policy_checkpoint是残差模型。
-class PPODeltaD(PPO):
+class PPODeltaD(MHPPO):
     def __init__(self,
                  env: BaseTask,
                  config,
@@ -41,6 +42,13 @@ class PPODeltaD(PPO):
                  device='cpu'):
         super().__init__(env, config, log_dir, device)
         self.policy_checkpoint = config.policy_checkpoint if hasattr(config, 'policy_checkpoint') else None
+        stats = OnlineMeanCovBatch(dim=23)
+        stats.load("action_stats.npz")
+        self.mean = stats.get_mean()
+        self.cov = stats.get_cov()
+        self.inv_cov = np.linalg.inv(self.cov + 1e-6 * np.eye(self.cov.shape[0]))
+        #print(self.inv_cov)
+        #print(self.mean)
         if self.policy_checkpoint is not None:
             has_config = True
             checkpoint = Path(self.policy_checkpoint)
@@ -66,7 +74,7 @@ class PPODeltaD(PPO):
                 self.loaded_policy: BaseAlgo = instantiate(policy_config.algo, env=self.env, device=self.device, log_dir=None)
                 self.loaded_policy.algo_obs_dim_dict = policy_config.env.config.robot.algo_obs_dim_dict
                 self.loaded_policy.setup()
-                self.loaded_policy.load(self.policy_checkpoint)
+                self.loaded_policy.load(self.policy_checkpoint,load_critic=False)
                 self.loaded_policy._eval_mode()
                 self.loaded_policy.eval_policy = self.loaded_policy._get_inference_policy()
     
@@ -90,7 +98,11 @@ class PPODeltaD(PPO):
     # def _actor_act_step(self, obs_dict):
     #     actions = self.actor.act(obs_dict["actor_obs"])
     #     return self.actor.act_inference(obs_dict["actor_obs"])
-
+    def mahalanobis(self,x, mean, inv_cov):
+        # x: (batch, dim)
+        diff = x - mean  # (batch, dim)
+        # einsum更高效
+        return np.sqrt(np.einsum('bi,ij,bj->b', diff, inv_cov, diff))
     def _rollout_step(self, obs_dict):
         with torch.inference_mode():
             for i in range(self.num_steps_per_env):
@@ -111,15 +123,25 @@ class PPODeltaD(PPO):
                     actions # 用当前策略的actions构建残差模型的输入
                 ], dim=1)
                 delta_actions = self.loaded_policy.eval_policy(obs_dict['closed_loop_actor_obs']).detach()
-                #delta_actions = torch.clamp(delta_actions, min=-0.8, max=0.8)
-                min_val = -0.8
-                max_val = 0.8
+                #delta_actions_np = delta_actions.cpu().numpy()  # (num_envs, 23)
+                #D = self.mahalanobis(delta_actions_np, self.mean, self.inv_cov)  # (num_envs,)
+                #mask = (D >= 5.930637539667051)  # (num_envs,)
+                #mask = torch.from_numpy(mask).to(delta_actions.device).unsqueeze(1)  # (num_envs, 1)
+                #delta_actions = delta_actions * (~mask).float()  # OOD的动作全部置0
+                
+                min_val = -0.3
+                max_val = 0.3
 
                 # 生成掩码：范围内为True，超出为False
                 mask = (delta_actions >= min_val) & (delta_actions <= max_val)
 
-                # 超出范围的动作置为0，范围内的动作保持原值
+                
+                #5.930637539667051
+
+                
                 delta_actions = delta_actions * mask.float()
+                # 记录每步每个维度的均值
+                delta_action_dim_mean = delta_actions.mean(dim=0).cpu().numpy()
                 # 记录每步每个维度的均值
                 delta_action_dim_mean = delta_actions.mean(dim=0).cpu().numpy()  # shape: [action_dim]
                 #self.delta_action_dim_history.append(delta_action_dim_mean)
@@ -158,7 +180,8 @@ class PPODeltaD(PPO):
                 rewards, dones = rewards.to(self.device), dones.to(self.device)
 
                 self.episode_env_tensors.add(infos["to_log"])
-                rewards_stored = rewards.clone().unsqueeze(1)
+                #rewards_stored = rewards.clone().unsqueeze(1)
+                rewards_stored = rewards.clone().reshape(self.env.num_envs, self.env.num_rew_fn)
                 if 'time_outs' in infos:
                     rewards_stored += self.gamma * policy_state_dict['values'] * infos['time_outs'].unsqueeze(1).to(self.device)
                 assert len(rewards_stored.shape) == 2
@@ -168,11 +191,24 @@ class PPODeltaD(PPO):
 
                 self._process_env_step(rewards, dones, infos)
 
-                if self.log_dir is not None:
+                '''if self.log_dir is not None:
                     # Book keeping
                     if 'episode' in infos:
                         self.ep_infos.append(infos['episode'])
                     self.cur_reward_sum += rewards
+                    self.cur_episode_length += 1
+                    new_ids = (dones > 0).nonzero(as_tuple=False)
+                    self.rewbuffer.extend(self.cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                    self.lenbuffer.extend(self.cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
+                    self.cur_reward_sum[new_ids] = 0
+                    self.cur_episode_length[new_ids] = 0'''
+                if self.log_dir is not None:
+                    # Book keeping
+                    if 'episode' in infos:
+                        self.ep_infos.append(infos['episode'])
+                    # self.cur_reward_sum += rewards.sum(dim=1)  # Sum rewards across reward functions
+                    self.cur_reward_sum += rewards.view(self.env.num_envs, self.env.num_rew_fn).sum(dim=-1)
+
                     self.cur_episode_length += 1
                     new_ids = (dones > 0).nonzero(as_tuple=False)
                     self.rewbuffer.extend(self.cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())

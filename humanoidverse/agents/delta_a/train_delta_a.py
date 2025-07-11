@@ -22,7 +22,7 @@ from rich.panel import Panel
 from rich.live import Live
 
 console = Console()
-
+from humanoidverse.agents.mh_ppo.mh_ppo import MHPPO
 from humanoidverse.agents.ppo.ppo import PPO
 from humanoidverse.envs.base_task.base_task import BaseTask
 from pathlib import Path
@@ -33,7 +33,7 @@ from humanoidverse.agents.base_algo.base_algo import BaseAlgo
 from hydra.utils import instantiate
 
 #训练delta action模型，policy_checkpoint是预训练模型。
-class PPODeltaA(PPO):
+class PPODeltaA(MHPPO):
     def __init__(self,
                  env: BaseTask,
                  config,
@@ -240,7 +240,8 @@ class PPODeltaA(PPO):
                 rewards, dones = rewards.to(self.device), dones.to(self.device)
 
                 self.episode_env_tensors.add(infos["to_log"])
-                rewards_stored = rewards.clone().unsqueeze(1)
+                #rewards_stored = rewards.clone().unsqueeze(1)
+                rewards_stored = rewards.clone().reshape(self.env.num_envs, self.env.num_rew_fn)
                 if 'time_outs' in infos:
                     rewards_stored += self.gamma * policy_state_dict['values'] * infos['time_outs'].unsqueeze(1).to(self.device)
                 assert len(rewards_stored.shape) == 2
@@ -250,11 +251,24 @@ class PPODeltaA(PPO):
 
                 self._process_env_step(rewards, dones, infos)
 
-                if self.log_dir is not None:
+                '''if self.log_dir is not None:
                     # Book keeping
                     if 'episode' in infos:
                         self.ep_infos.append(infos['episode'])
                     self.cur_reward_sum += rewards
+                    self.cur_episode_length += 1
+                    new_ids = (dones > 0).nonzero(as_tuple=False)
+                    self.rewbuffer.extend(self.cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                    self.lenbuffer.extend(self.cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
+                    self.cur_reward_sum[new_ids] = 0
+                    self.cur_episode_length[new_ids] = 0'''
+                if self.log_dir is not None:
+                    # Book keeping
+                    if 'episode' in infos:
+                        self.ep_infos.append(infos['episode'])
+                    # self.cur_reward_sum += rewards.sum(dim=1)  # Sum rewards across reward functions
+                    self.cur_reward_sum += rewards.view(self.env.num_envs, self.env.num_rew_fn).sum(dim=-1)
+
                     self.cur_episode_length += 1
                     new_ids = (dones > 0).nonzero(as_tuple=False)
                     self.rewbuffer.extend(self.cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())

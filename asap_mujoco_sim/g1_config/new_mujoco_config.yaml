@@ -1,0 +1,72 @@
+# G1机器人Mujoco仿真配置文件
+# 基本仿真参数
+policy_path: "policy.pkl"
+cycle_time: 0.02
+xml_path: "g1_urdf/g1_29dof_anneal_23dof.xml"
+num_single_obs: 76
+simulation_dt: 0.005
+simulation_duration: 10.0
+control_decimation: 4
+frame_stack: 4
+episode_steps: 1000
+total_steps: 10000
+render: true
+use_noise: false
+
+# 观测数据缩放参数
+obs_scale_base_ang_vel: 1.0
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 1.0
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+# 控制参数
+num_actions: 23
+clip_observations: 10.0
+clip_actions: 10.0
+action_scale: 1.0
+
+# 默认关节位置 (23个关节)
+default_dof_pos: [-0.1, 0.0, 0.0, 0.3, -0.2, 0,
+                -0.1, 0.0, 0.0, 0.3, -0.2, 0,
+                  0.0, 0.0, 0.0,
+                   0.0, 0.0, 0.0, 0.0,
+                 0.0, 0.0, 0.0, 0.0]
+
+# PD控制参数
+kps: [
+  100, 100, 100, 200, 20, 20,      # 左腿KP
+  100, 100, 100, 200, 20, 20,      # 右腿KP
+  100, 100, 100,                   # 腰部KP
+  20, 20, 20, 20,                  # 左臂KP
+  20, 20, 20, 20                   # 右臂KP
+]
+
+kds: [
+  2.5, 2.5, 2.5, 5.0, 0.2, 0.1,   # 左腿KD
+  2.5, 2.5, 2.5, 5.0, 0.2, 0.1,   # 右腿KD
+  2.5, 2.5, 2.5,                  # 腰部KD
+  0.5, 0.5, 0.5, 0.5,             # 左臂KD
+  0.5, 0.5, 0.5, 0.5              # 右臂KD
+]
+
+# 扭矩限制
+tau_limit: [
+  80, 80, 80, 120, 30, 30,         # 左腿扭矩限制
+  80, 80, 80, 120, 30, 30,         # 右腿扭矩限制
+  80, 80, 80,                      # 腰部扭矩限制
+  30, 30, 30, 30,                  # 左臂扭矩限制
+  30, 30, 30, 30                   # 右臂扭矩限制
+]
+
+# 移动和站立测试参数
+move_to_default_time: 2.0          # 移动到默认位置的时间(秒)
+stand_test_time: 8.0               # 站立测试时间(秒)
+stand_kp_scale: 1.0                # 站立测试时的kp缩放
+stand_kd_scale: 1.0                # 站立测试时的kd缩放
+
+# 🚀 平衡控制器参数 (新增)
+balance_enable: true                      # 是否启用平衡控制器
+balance_tilt_threshold: 0.1              # 倾斜阈值(弧度) - 约5.7度
+balance_correction_strength: 0.3        # 平衡修正强度 (0.1-0.3合适) 

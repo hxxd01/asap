@@ -1,0 +1,107 @@
+# @package _global_
+
+# 站立平衡专用奖励配置
+rewards:
+  set_reward: StandingBalance
+  set_reward_date: 20250109
+  only_positive_rewards: False
+  
+  reward_scales:
+    # 🎯 核心站立奖励
+    standing_pose_tracking: 3.0        # 保持目标姿态
+    standing_base_stability: 2.0       # 基座稳定性
+    standing_upright_posture: 1.5      # 直立姿态
+    standing_balance_reward: 1.0       # 平衡奖励
+    
+    # 🔄 运动最小化奖励
+    minimize_dof_vel: 0.8              # 最小化关节速度
+    minimize_base_motion: 0.5          # 最小化基座运动  
+    minimize_action_magnitude: 0.3     # 最小化动作幅度
+    
+    # ⚡ 惩罚项
+    penalty_torques: -0.00001          # 扭矩惩罚
+    penalty_dof_acc: -1.0e-7           # 关节加速度惩罚
+    penalty_action_rate: -0.01         # 动作变化率惩罚
+    penalty_base_angular_vel: -0.1     # 基座角速度惩罚
+    penalty_orientation_drift: -1.0    # 姿态漂移惩罚
+    penalty_position_drift: -0.5       # 位置漂移惩罚
+    penalty_height_variation: -2.0     # 高度变化惩罚
+    
+    # 🚫 限制惩罚
+    limits_dof_pos: -10.0              # 关节位置限制
+    limits_dof_vel: -5.0               # 关节速度限制
+    limits_torque: -0.1                # 扭矩限制
+    
+    # 💥 严重惩罚
+    penalty_large_tilt: -50.0          # 大倾斜惩罚
+    penalty_instability: -20.0         # 不稳定惩罚
+    termination: -200.0                # 终止惩罚
+    
+    # 🎁 奖励增益
+    stability_bonus: 0.1               # 稳定性奖励
+    time_bonus: 0.05                   # 时间奖励
+    
+  # 🎯 站立追踪精度
+  standing_tracking_sigma:
+    pose_tracking: 0.1                 # 姿态追踪精度
+    base_stability: 0.05               # 基座稳定性精度
+    upright_posture: 0.1               # 直立姿态精度
+    
+  # 🔄 运动限制
+  standing_motion_limits:
+    max_dof_vel: 2.0                   # 最大关节速度
+    max_base_vel: 0.1                  # 最大基座速度
+    max_base_ang_vel: 0.2              # 最大基座角速度
+    max_action_magnitude: 0.5          # 最大动作幅度
+    
+  # 📏 稳定性阈值
+  standing_stability_thresholds:
+    tilt_threshold: 0.1                # 倾斜阈值(弧度)
+    drift_threshold: 0.05              # 漂移阈值(米)
+    height_variation_threshold: 0.02   # 高度变化阈值
+    
+  # 🎯 目标姿态 (G1默认站立姿态)
+  target_standing_pose:
+    dof_pos: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0,  # 左腿
+              -0.1, 0.0, 0.0, 0.3, -0.2, 0.0,   # 右腿
+              0.0, 0.0, 0.0,                     # 腰部
+              0.0, 0.0, 0.0, 0.0,                # 左臂
+              0.0, 0.0, 0.0, 0.0]                # 右臂
+    base_height: 0.72                            # 目标基座高度
+    
+  # 🏋️ 扰动测试奖励
+  disturbance_rewards:
+    recovery_bonus: 2.0                # 恢复奖励
+    resistance_bonus: 1.0              # 抗扰动奖励
+    
+  # 📊 奖励限制
+  reward_limit:
+    soft_dof_pos_limit: 0.9
+    soft_dof_vel_limit: 0.9
+    soft_torque_limit: 0.9
+    
+  # 🎓 课程学习
+  reward_penalty_curriculum: False
+  reward_initial_penalty_scale: 1.0
+  reward_min_penalty_scale: 0.0
+  reward_max_penalty_scale: 1.0
+  reward_penalty_level_down_threshold: 500
+  reward_penalty_level_up_threshold: 800
+  reward_penalty_degree: 0.00001
+  num_compute_average_epl: 10000
+  
+  # 📝 惩罚奖励列表
+  reward_penalty_reward_names: [
+    "penalty_torques",
+    "penalty_dof_acc", 
+    "penalty_action_rate",
+    "penalty_base_angular_vel",
+    "penalty_orientation_drift",
+    "penalty_position_drift",
+    "penalty_height_variation",
+    "limits_dof_pos",
+    "limits_dof_vel", 
+    "limits_torque",
+    "penalty_large_tilt",
+    "penalty_instability"
+  ] 

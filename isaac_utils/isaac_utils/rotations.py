@@ -8,7 +8,21 @@ from isaac_utils.maths import (
 from typing import Tuple
 import numpy as np
 from typing import List, Optional
+@torch.jit.script
+def calc_yaw_heading_quat_inv(yaw: Tensor) -> Tensor:
+    # yaw: (B, 1)
+    half_yaw = yaw[..., 0] * 0.5  # (B,)
+    sin_half = torch.sin(half_yaw)  # (B,)
+    cos_half = torch.cos(half_yaw)  # (B,)
 
+    zeros = torch.zeros_like(sin_half)  # (B,)
+    qx = zeros
+    qy = zeros
+    qz = -sin_half
+    qw = cos_half
+
+    heading_q = torch.stack([qx, qy, qz, qw], dim=-1)  # (B, 4)
+    return heading_q
 @torch.jit.script
 def quat_unit(a):
     return normalize(a)
@@ -33,6 +47,7 @@ def quat_apply_yaw(quat: Tensor, vec: Tensor, w_last: bool) -> Tensor:
     quat_yaw[:, :2] = 0.0
     quat_yaw = normalize(quat_yaw)
     return quat_apply(quat_yaw, vec, w_last)
+
 
 
 @torch.jit.script

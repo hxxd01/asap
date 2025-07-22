@@ -56,6 +56,7 @@ class MotionLibBase():
         self._device = device
         self.mesh_parsers = None
         self.has_action = False
+        self.has_contact_mask = None
         skeleton_file = Path(self.m_cfg.asset.assetRoot) / self.m_cfg.asset.assetFileName
         self.skeleton_tree = SkeletonTree.from_mjcf(skeleton_file)
         logger.info(f"Loaded skeleton from {skeleton_file}")
@@ -106,7 +107,7 @@ class MotionLibBase():
         self._sampling_prob = torch.ones(self._num_unique_motions).to(self._device) / self._num_unique_motions  # For use in sampling batches
 
     def get_motion_actions(self, motion_ids, motion_times):
-        raise RuntimeError("You Should not call it.")
+        
         motion_len = self._motion_lengths[motion_ids]
         num_frames = self._motion_num_frames[motion_ids]
         dt = self._motion_dt[motion_ids]
@@ -378,7 +379,7 @@ class MotionLibBase():
                 key = motion_data_list[f].split("/")[-1].split(".")[0]
                 curr_file = joblib.load(curr_file)[key]
                 
-            if True: 
+            if False: 
                 print("DEBUG: !!!! MotionLibBase: rebase root_trans_offset & root_rot_offset")
                 curr_file['root_trans_offset'][:] = np.array([0, 0, 0.8], dtype=np.float64)
                 target_heading = np.array([0, 0, 0, 1.0])

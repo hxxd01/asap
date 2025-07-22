@@ -28,7 +28,9 @@ motion_lib = None
 def get_appendix_motion_data(pol_motion_file_path):
     with open(pol_motion_file_path, 'rb') as f:
         motion_data = joblib.load(f)
-        assert len(motion_data) == 1, 'current only support single motion tracking'
+        # 支持多动作文件：如果有多个动作，使用第一个动作
+        if len(motion_data) > 1:
+            print(f"Warning: Found {len(motion_data)} motions, using the first one")
         # get the first motion data
         motion_data = motion_data[next(iter(motion_data))]
         

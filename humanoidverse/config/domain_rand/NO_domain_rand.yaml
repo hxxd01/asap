@@ -26,7 +26,7 @@ domain_rand:
   kp_range : [0.75, 1.25]
   kd_range : [0.75, 1.25]
 
-
+  use_rao : False
 
   randomize_friction : False
   # randomize_friction : False

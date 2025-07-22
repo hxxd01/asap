@@ -106,7 +106,8 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
 
         self.init_done = True
         self.debug_viz = True
-
+        self._base_pos_norm_mean = torch.tensor([111, 109, 0.7], device=self.device, dtype=torch.float32)
+        self._base_pos_norm_scale = torch.tensor([0.01, 0.01, 2], device=self.device, dtype=torch.float32)
         self._init_save_motion()
 
         if self.config.use_teleop_control:
@@ -585,6 +586,7 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         
         offset = self.env_origins
         B = self.motion_ids.shape[0]
+        self._motion_times = (self.episode_length_buf + 1) * self.dt + self.motion_start_times
         motion_times = (self.episode_length_buf + 1) * self.dt + self.motion_start_times # next frames so +1
         
         
@@ -602,7 +604,7 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
             
                 # (Pdb) print( [(k,v.shape) for k,v in motion_res.items()  ]  )
                 # [('root_pos', torch.Size([1, 3])), ('root_rot', torch.Size([1, 4])), ('dof_pos', torch.Size([1, 23])), ('root_vel', torch.Size([1, 3])), ('root_ang_vel', torch.Size([1, 3])), ('dof_vel', torch.Size([1, 23])), ('motion_aa', torch.Size([1, 72])), ('motion_bodies', torch.Size([1, 17])), ('rg_pos', torch.Size([1, 24, 3])), ('rb_rot', torch.Size([1, 24, 4])), ('body_vel', torch.Size([1, 24, 3])), ('body_ang_vel', torch.Size([1, 24, 3])), ('rg_pos_t', torch.Size([1, 27, 3])), ('rg_rot_t', torch.Size([1, 27, 4])), ('body_vel_t', torch.Size([1, 27, 3])), ('body_ang_vel_t', torch.Size([1, 27, 3]))]
-        if self._motion_lib.has_contact_mask:
+        if hasattr(self._motion_lib, 'has_contact_mask') and self._motion_lib.has_contact_mask:
             self.ref_contact_mask = motion_res["contact_mask"]
             
             
@@ -988,6 +990,36 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
 
     def _get_obs_future_ref_dof_vel(self):
         return self._obs_future_ref_dof_vel
+    def _get_obs_base_pos(self):
+        """获取机器人基础位置作为观察值，并进行归一化"""
+        raw_pos = self.simulator.robot_root_states[:, 0:3]
+        '''print(f"base_pos x: min={raw_pos[:, 0].min().item():.4f}, max={raw_pos[:, 0].max().item():.4f}")
+        print(f"base_pos y: min={raw_pos[:, 1].min().item():.4f}, max={raw_pos[:, 1].max().item():.4f}")
+        print(f"base_pos z: min={raw_pos[:, 2].min().item():.4f}, max={raw_pos[:, 2].max().item():.4f}")
+        print(f"base_pos x: mean={raw_pos[:, 0].mean().item():.4f}, std={raw_pos[:, 0].std().item():.4f}")
+        print(f"base_pos y: mean={raw_pos[:, 1].mean().item():.4f}, std={raw_pos[:, 1].std().item():.4f}")
+        print(f"base_pos z: mean={raw_pos[:, 2].mean().item():.4f}, std={raw_pos[:, 2].std().item():.4f}")'''
+        normalized_pos = (raw_pos - self._base_pos_norm_mean) * self._base_pos_norm_scale
+
+        return normalized_pos
+
+    def _get_obs_base_rot(self):
+        """获取机器人基础旋转作为观察值（四元数）"""
+        if self.config.simulator.config.name == "isaacgym":
+            return self.simulator.robot_root_states[:, 3:7]  # IsaacGym直接是xyzw格式
+        elif self.config.simulator.config.name == "isaacsim":
+            return self.simulator.robot_root_states[:, [4, 5, 6, 3]]  # IsaacSim是wxyz，需要转换为xyzw
+        elif self.config.simulator.config.name == "genesis":
+            return self.simulator.robot_root_states[:, 3:7]  # Genesis直接是xyzw格式
+        else:
+            raise NotImplementedError
+
+    def _get_obs_z_actions(self):
+        """获取参考动作作为观察值"""
+        if not hasattr(self, '_ref_actions') or self._ref_actions is None:
+            print("Warning: _ref_actions not initialized, initializing with zeros")
+            self._ref_actions = torch.zeros((self.num_envs, self.dim_actions), device=self.device)
+        return self._ref_actions
 
     ######################### Observations #########################
     def _get_obs_history_actor(self,):

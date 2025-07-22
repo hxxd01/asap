@@ -173,7 +173,7 @@ class MHPPO(BaseAlgo):
         self.actor.train()
         self.critic.train()
 
-    def load(self, ckpt_path):
+    '''def load(self, ckpt_path):
         # import ipdb; ipdb.set_trace()
         if ckpt_path is not None:
             logger.info(f"Loading checkpoint from {ckpt_path}")
@@ -189,6 +189,29 @@ class MHPPO(BaseAlgo):
                 logger.info(f"Optimizer loaded from checkpoint")
                 logger.info(f"Actor Learning rate: {self.actor_learning_rate}")
                 logger.info(f"Critic Learning rate: {self.critic_learning_rate}")
+            self.current_learning_iteration = loaded_dict["iter"]
+            return loaded_dict["infos"]'''
+
+    def load(self, ckpt_path,load_critic=True):
+        # import ipdb; ipdb.set_trace()
+        if ckpt_path is not None:
+            logger.info(f"Loading checkpoint from {ckpt_path}")
+            loaded_dict = torch.load(ckpt_path, map_location=self.device)
+            self.actor.load_state_dict(loaded_dict["actor_model_state_dict"])
+            if load_critic:
+                self.critic.load_state_dict(loaded_dict["critic_model_state_dict"])
+            if self.load_optimizer:
+                self.actor_optimizer.load_state_dict(loaded_dict["actor_optimizer_state_dict"])
+                if load_critic:
+                    self.critic_optimizer.load_state_dict(loaded_dict["critic_optimizer_state_dict"])
+                self.actor_learning_rate = loaded_dict['actor_optimizer_state_dict']['param_groups'][0]['lr']
+                if load_critic:
+                    self.critic_learning_rate = loaded_dict['critic_optimizer_state_dict']['param_groups'][0]['lr']
+                self.set_learning_rate(self.actor_learning_rate, self.critic_learning_rate)
+                logger.info(f"Optimizer loaded from checkpoint")
+                logger.info(f"Actor Learning rate: {self.actor_learning_rate}")
+                if load_critic:
+                    logger.info(f"Critic Learning rate: {self.critic_learning_rate}")
             self.current_learning_iteration = loaded_dict["iter"]
             return loaded_dict["infos"]
 

@@ -3,87 +3,121 @@
 defaults:
   - legged_base
 
-# Env structure
+# ===============================
+# 环境结构配置
+# ===============================
 env:
   _target_: humanoidverse.envs.motion_tracking.motion_tracking.LeggedRobotMotionTracking
   config:
-    use_vec_reward: True
-    max_episode_length_s: 100000
+    use_vec_reward: True              # 是否使用向量化奖励（每个奖励项分别计算）
+    max_episode_length_s: 100000      # 最大episode长度（秒）
+    
+    # ===============================
+    # 终止条件配置
+    # ===============================
     termination:
-      terminate_by_contact: False
-      terminate_by_gravity: True
-      terminate_by_low_height: False
-      terminate_when_motion_end: True
-      terminate_when_motion_far: True
-      terminate_when_dof_far: False
-      terminate_when_close_to_dof_pos_limit: False
-      terminate_when_close_to_dof_vel_limit: False
-      terminate_when_close_to_torque_limit: False
+      terminate_by_contact: False             # 是否因接触终止episode
+      terminate_by_gravity: True              # 是否因重力方向偏差终止（机器人倾倒）
+      terminate_by_low_height: False          # 是否因高度过低终止
+      terminate_when_motion_end: True         # 是否在动作序列结束时终止
+      terminate_when_motion_far: True         # 是否因偏离参考动作过远终止
+      terminate_when_dof_far: False           # 是否因关节角度偏差过大终止
+      terminate_when_close_to_dof_pos_limit: False    # 是否因关节位置接近限制终止
+      terminate_when_close_to_dof_vel_limit: False    # 是否因关节速度接近限制终止
+      terminate_when_close_to_torque_limit: False     # 是否因扭矩接近限制终止
+    
+    # ===============================
+    # 终止阈值配置
+    # ===============================
     termination_scales:
-      termination_min_base_height : 0.2
-      termination_gravity_x : 0.8
-      termination_gravity_y : 0.8
-      termination_gravity : 0.75
-      termination_motion_far_threshold : 1.5
-      termination_close_to_dof_pos_limit : 0.98
-      termination_close_to_dof_vel_limit : 0.98
-      termination_close_to_torque_limit : 0.98
+      termination_min_base_height : 0.2           # 最小基座高度阈值（米）
+      termination_gravity_x : 0.8                 # X轴重力分量阈值
+      termination_gravity_y : 0.8                 # Y轴重力分量阈值  
+      termination_gravity : 0.75                  # 整体重力方向阈值
+      termination_motion_far_threshold : 1.5      # 动作偏差终止阈值
+      termination_close_to_dof_pos_limit : 0.98   # 关节位置限制比例（98%时终止）
+      termination_close_to_dof_vel_limit : 0.98   # 关节速度限制比例
+      termination_close_to_torque_limit : 0.98    # 扭矩限制比例
+    
+    # ===============================
+    # 终止概率配置（随机终止机制）
+    # ===============================
     termination_probality:
-      terminate_when_close_to_dof_pos_limit: 0.25
-      terminate_when_close_to_dof_vel_limit: 0.25
-      terminate_when_close_to_torque_limit: 0.25
+      terminate_when_close_to_dof_pos_limit: 0.25    # 关节位置接近限制时的终止概率
+      terminate_when_close_to_dof_vel_limit: 0.25    # 关节速度接近限制时的终止概率
+      terminate_when_close_to_torque_limit: 0.25     # 扭矩接近限制时的终止概率
+    
+    # ===============================
+    # 课程学习配置（渐进式训练难度调整）
+    # ===============================
     termination_curriculum:
-      terminate_when_motion_far_curriculum: True
-      terminate_when_motion_far_initial_threshold: 1.5
-      terminate_when_motion_far_threshold_max: 2.0
-      terminate_when_motion_far_threshold_min: 0.3
-      terminate_when_motion_far_curriculum_degree: 0.000025
-      terminate_when_motion_far_curriculum_level_down_threshold: 40
-      terminate_when_motion_far_curriculum_level_up_threshold: 42
+      # 动作偏差课程学习
+      terminate_when_motion_far_curriculum: True          # 启用动作偏差课程学习
+      terminate_when_motion_far_initial_threshold: 1.5    # 初始动作偏差阈值
+      terminate_when_motion_far_threshold_max: 2.0        # 最大动作偏差阈值
+      terminate_when_motion_far_threshold_min: 0.3        # 最小动作偏差阈值
+      terminate_when_motion_far_curriculum_degree: 0.000025      # 课程学习调整幅度
+      terminate_when_motion_far_curriculum_level_down_threshold: 40   # 降低难度的episode长度阈值
+      terminate_when_motion_far_curriculum_level_up_threshold: 42     # 提高难度的episode长度阈值
 
+      # 关节偏差课程学习
       terminate_when_dof_far_curriculum:
-        enable: True
-        init: 3.0
-        max: 3.0
-        min: 1.0
-        degree: 0.000002
-        level_down_threshold: 40
-        level_up_threshold: 42
+        enable: True          # 启用关节偏差课程学习
+        init: 3.0            # 初始关节偏差阈值
+        max: 3.0             # 最大关节偏差阈值
+        min: 1.0             # 最小关节偏差阈值
+        degree: 0.000002     # 课程学习调整幅度
+        level_down_threshold: 40    # 降低难度阈值
+        level_up_threshold: 42      # 提高难度阈值
 
-    resample_motion_when_training: False
-    resample_time_interval_s: 2000
+    # ===============================
+    # 动作采样配置
+    # ===============================
+    resample_motion_when_training: False    # 训练时是否重新采样动作
+    resample_time_interval_s: 2000          # 重新采样的时间间隔（秒）
 
-    noise_to_initial_level: 0
-    init_noise_scale: 
-      dof_pos: 0.1
-      dof_vel: 0.15
-      root_pos: 0.05
-      root_rot: 10 # degree, * 3.14 / 180
-      root_vel: 0.01
-      root_ang_vel: 0.01
+    # ===============================
+    # 初始化噪声配置
+    # ===============================
+    noise_to_initial_level: 0               # 初始噪声级别
+    init_noise_scale:                       # 各种状态的初始噪声幅度
+      dof_pos: 0.1         # 关节位置噪声
+      dof_vel: 0.15        # 关节速度噪声
+      root_pos: 0.05       # 根节点位置噪声
+      root_rot: 10         # 根节点旋转噪声（度数，会转换为弧度）
+      root_vel: 0.01       # 根节点速度噪声
+      root_ang_vel: 0.01   # 根节点角速度噪声
 
-    use_teleop_control: False
-    enforce_randomize_motion_start_eval: False
+    # ===============================
+    # 控制配置
+    # ===============================
+    use_teleop_control: False                    # 是否使用远程操作控制
+    enforce_randomize_motion_start_eval: False   # 评估时是否强制随机化动作起始点
 
-
+    # ===============================
+    # 软动态修正配置（可选功能）
+    # ===============================
     soft_dynamic_correction:
-      enable: False
-      alpha: 0.1
-      type: "deter" # "prob" or "deter"
+      enable: False         # 启用软动态修正
+      alpha: 0.1           # 修正强度系数
+      type: "deter"        # 修正类型："prob"(概率性) 或 "deter"(确定性)
       curriculum:
-        enable: True
-        max_alpha: 0.9
-        min_alpha: 0.0
-        degree: 0.00001
-        level_down_threshold: 40
-        level_up_threshold: 42
+        enable: True              # 启用课程学习
+        max_alpha: 0.9           # 最大修正强度
+        min_alpha: 0.0           # 最小修正强度
+        degree: 0.00001          # 调整幅度
+        level_down_threshold: 40  # 降低修正强度的阈值
+        level_up_threshold: 42    # 提高修正强度的阈值
 
+# ===============================
+# 全局参数
+# ===============================
+log_task_name: motion_tracking    # 日志任务名称
 
-
-# Globally accessible parameters
-log_task_name: motion_tracking
-
+# ===============================
+# 评估模式配置覆写
+# ===============================
 eval_overrides:
   env:
     config: 
-      max_episode_length_s: 100000
+      max_episode_length_s: 100000    # 评估时的最大episode长度

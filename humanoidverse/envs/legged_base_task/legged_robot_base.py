@@ -35,12 +35,15 @@ class LeggedRobotBase(BaseTask):
         self.history_handler = HistoryHandler(self.num_envs, config.obs.obs_auxiliary, config.obs.obs_dims, device)
         self.is_evaluating = False
         self.init_done = True
-
+        self.delta_action_history = []
+        self.delta_action_history_max_window = 10000
+        self.delta_action_history_max = 0.0
     def _init_buffers(self):
         """ Initialize torch tensors which will contain simulation states and processed quantities
         """
         super()._init_buffers()
-
+        self.delta_action_stat_counter = 0
+        self.delta_action_stat_interval = 1500
         self.base_quat = self.simulator.base_quat # XYZW
         self.rpy = get_euler_xyz_in_tensor(self.base_quat)
 
@@ -49,6 +52,7 @@ class LeggedRobotBase(BaseTask):
         self.extras = {}
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
+        self.delta_actions = torch.zeros(self.num_envs, self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.torques = torch.zeros(self.num_envs, self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.p_gains = torch.zeros(self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.d_gains = torch.zeros(self.dim_actions, dtype=torch.float, device=self.device, requires_grad=False)
@@ -222,7 +226,64 @@ class LeggedRobotBase(BaseTask):
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
         """
-        
+        if "delta_actions" in actor_state :
+
+            self.delta_actions = actor_state["delta_actions"]
+        '''if "delta_actions" in actor_state:
+
+            self.delta_actions = actor_state["delta_actions"]
+            delta_actions = actor_state["delta_actions"].detach().cpu().numpy()  # shape: (num_envs, num_actions_per_env)
+            # self.stats.update(delta_actions)
+            # 先对所有环境取均值，得到 shape: (num_actions_per_env,)
+            delta_actions_mean = delta_actions.mean(axis=0)
+            self.delta_action_history.append(delta_actions_mean)
+            if len(self.delta_action_history) > self.delta_action_history_max_window:
+                self.delta_action_history.pop(0)
+            arr = np.stack(self.delta_action_history, axis=0)
+            mean_per_dim = arr.mean(axis=0)  # shape: (num_actions_per_env,)
+            self.delta_action_stat_counter += 1
+            # 在动作维度上取最大
+            max_mean = mean_per_dim.max()
+            if self.delta_action_stat_counter % self.delta_action_stat_interval == 0:
+                # shape: (window, num_actions_per_env)
+                arr = np.stack(self.delta_action_history, axis=0)
+                # 对window维度取均值，得到每个动作维度的平均动作变化
+
+                joint_names = [
+                    ("left_hip_pitch_joint", "左髋屈伸关节"),
+                    ("left_hip_roll_joint", "左髋侧摆关节"),
+                    ("left_hip_yaw_joint", "左髋旋转关节"),
+                    ("left_knee_joint", "左膝关节"),
+                    ("left_ankle_pitch_joint", "左踝屈伸关节"),
+                    ("left_ankle_roll_joint", "左踝侧摆关节"),
+                    ("right_hip_pitch_joint", "右髋屈伸关节"),
+                    ("right_hip_roll_joint", "右髋侧摆关节"),
+                    ("right_hip_yaw_joint", "右髋旋转关节"),
+                    ("right_knee_joint", "右膝关节"),
+                    ("right_ankle_pitch_joint", "右踝屈伸关节"),
+                    ("right_ankle_roll_joint", "右踝侧摆关节"),
+                    ("waist_yaw_joint", "腰部旋转关节"),
+                    ("waist_roll_joint", "腰部侧摆关节"),
+                    ("waist_pitch_joint", "腰部屈伸关节"),
+                    ("left_shoulder_pitch_joint", "左肩屈伸关节"),
+                    ("left_shoulder_roll_joint", "左肩侧摆关节"),
+                    ("left_shoulder_yaw_joint", "左肩旋转关节"),
+                    ("left_elbow_joint", "左肘关节"),
+                    ("right_shoulder_pitch_joint", "右肩屈伸关节"),
+                    ("right_shoulder_roll_joint", "右肩侧摆关节"),
+                    ("right_shoulder_yaw_joint", "右肩旋转关节"),
+                    ("right_elbow_joint", "右肘关节"),
+                ]
+
+                max_per_dim = arr.max(axis=0)  # shape: (num_actions_per_env,)
+                min_per_dim = arr.min(axis=0)  # s
+                # 关节编号到中英文名称的映射
+                for i, (min_v, max_v) in enumerate(zip(min_per_dim, max_per_dim)):
+                    en, zh = joint_names[i]
+                    print(f"动作维度 {i}: {en}（{zh}） 最小值={min_v:.4f}, 最大值={max_v:.4f}")
+                    # self.stats.save("action_stats.npz")
+
+            self.log_dict["delta_action_history_max_mean"] = torch.tensor(max_mean, dtype=torch.float32)'''
         actions = actor_state["actions"]
         # actions *= 0.0
         self._pre_physics_step(actions)
@@ -1174,3 +1235,9 @@ class LeggedRobotBase(BaseTask):
     @property
     def num_rew_fn(self):
         return len(self.reward_functions)+1 if self.config.use_vec_reward else 1
+
+    def _reward_action_norm(self):
+
+        reward = torch.exp(torch.norm(self.delta_actions, dim=-1)) - 1
+        reward = torch.clamp(reward, min=0.0, max=1000)
+        return reward

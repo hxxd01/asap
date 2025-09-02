@@ -1,0 +1,124 @@
+# @package _global_
+# Modified from `redr1l.yaml`
+
+defaults:
+  - domain_rand_base
+
+domain_rand:
+  reinit_epis_rand: -1
+
+  _push_fixed: true
+  push_robots : True
+  push_interval_s : [4, 8]  # 修改：缩短推力间隔，增加训练频率
+  # max_push_vel_xy : 0.1  # 原始配置
+  # max_push_vel_xy : 0.25  # 之前的修改
+  max_push_vel_xy : 0.5  # 修改：大幅增加推力强度，加强前倾恢复训练
+
+  randomize_base_com : True
+  base_com_range: #kg
+      # x : [-0.05, 0.05]  # 原始配置
+      x : [-0.02, 0.08]  # 修改：重心更多向前偏移，专门训练前倾恢复
+      y : [-0.05, 0.05]
+      z : [-0.01, 0.01]
+
+  randomize_link_mass : True
+  # link_mass_range : [0.9, 1.1] # *factor  # 原始配置
+  link_mass_range : [0.8, 1.2] # *factor  # 修改：扩大链接质量随机化范围
+  # randomize_link_com : False  # 原始配置
+  randomize_link_com : True  # 修改：启用链接质心随机化
+  link_com_range: #m
+      x : [-0.01, 0.01]
+      y : [-0.01, 0.01]
+      z : [-0.01, 0.01]
+  randomize_link_body_names : [
+      'pelvis', 'torso_link',
+      'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link',
+      'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link',
+      'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link',
+      'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link'
+  ]
+
+  randomize_link_inertia : True
+  link_inertia_range : [0.9,1.1] # *factor
+  randomize_link_inertia_names : [
+      'pelvis', 'torso_link',
+      'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link',
+      'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link',
+      'left_hip_yaw_link', 'left_hip_roll_link', 'left_hip_pitch_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link',
+      'right_hip_yaw_link', 'right_hip_roll_link', 'right_hip_pitch_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link'
+  ]
+
+  heavy_upper:
+    # enable: False  # 原始配置
+    enable: True  # 修改：启用上身重量增加随机化
+    ratio: 1.1 # all mass and inertia are scaled by this ratio
+    body_names: [
+        'torso_link',
+        'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link',
+        'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link',
+    ]
+  randomize_pd_gain : True
+  # kp_range : [0.9, 1.1]  # 原始配置
+  # kd_range : [0.9, 1.1]  # 原始配置
+  kp_range : [0.8, 1.2]  # 修改：扩大PD增益随机化范围
+  kd_range : [0.8, 1.2]  # 修改：扩大PD增益随机化范围
+
+  parallel_serial_pd:
+    # multiplicative composition with randomize_pd_gain, not replacing it
+    # enable: False  # 原始配置
+    enable: True  # 修改：启用并行串行PD增益随机化
+    ratio: [0.8, 1.2]
+    joint_idx: [4,5, 10,11, 13,14]
+
+
+  randomize_friction : True
+  # randomize_friction : False
+  # friction_range : [0.2, 1.2]  # 原始配置
+  friction_range : [0.2, 1.3]  # 修改：扩大摩擦力上限范围
+  # randomize_restitution : False  # 原始配置
+  randomize_restitution : True  # 修改：启用恢复系数随机化
+  restitution_range : [0.0, 1.0]
+
+  randomize_base_mass : False # replaced by randomize_link_mass
+  added_mass_range : [-5., 10.]
+
+  randomize_torque_rfi : True
+  use_rao : True
+  rao_lim : 0.05
+  rfi_lim : 0.05
+  randomize_rfi_lim : True
+  rfi_lim_range : [0.5, 1.5]
+
+  randomize_ctrl_delay : True
+  ctrl_delay_step_range : [0, 2] # integer max real delay is 90ms
+
+  # randomize_motion_ref_xyz: False # head only for now  # 原始配置
+  randomize_motion_ref_xyz: True # head only for now  # 修改：启用运动参考XYZ随机化
+  motion_ref_xyz_range : [[-0.02, 0.02],[-0.02, 0.02],[-0.1, 0.1]]
+
+  # motion_package_loss: False  # 原始配置
+  motion_package_loss: True  # 修改：启用运动数据包丢失模拟
+  package_loss_range: [1, 10] # dt = 0.02s, delay for 0.02s - 0.2s
+  package_loss_interval_s : 2
+
+
+  # born_offset : False  # 原始配置
+  born_offset : True  # 修改：启用出生位置偏移随机化
+  # born_offset_curriculum: False  # 原始配置
+  born_offset_curriculum: True  # 修改：启用出生位置偏移课程学习
+  born_offset_level_down_threshold: 50
+  born_offset_level_up_threshold: 120
+  level_degree: 0.00005
+  born_distance : 0.25
+  born_offset_range: [0.0, 1]
+  born_offset_possibility : 1.0
+
+  # born_heading_curriculum: False  # 原始配置
+  born_heading_curriculum: True  # 修改：启用出生朝向课程学习
+  # born_heading_randomization : False  # 原始配置
+  born_heading_randomization : True  # 修改：启用出生朝向随机化
+  born_heading_level_down_threshold: 50
+  born_heading_level_up_threshold: 120
+  born_heading_degree: 10
+  born_heading_range: [0, 180]
+  born_heading_level_degree: 0.00005

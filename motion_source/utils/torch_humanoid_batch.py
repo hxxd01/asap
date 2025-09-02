@@ -5,6 +5,7 @@ import pdb
 import os.path as osp
 sys.path.append(os.getcwd())
 sys.path.append(os.getcwd()+'/../motion_source')
+sys.path.append('/home/harry/Desktop/PBHC_old/smpl_retarget/poselib')
 import torch 
 from collections import defaultdict
 
@@ -16,7 +17,8 @@ from scipy.spatial.transform import Rotation as sRot
 import xml.etree.ElementTree as ETree
 from easydict import EasyDict
 import scipy.ndimage.filters as filters
-import smpl_sim.poselib.core.rotation3d as pRot
+
+import poselib.core.rotation3d as pRot
 from lxml.etree import XMLParser, parse, ElementTree, Element, SubElement
 from lxml import etree
 from io import BytesIO
@@ -36,7 +38,32 @@ class Humanoid_Batch:
 
     def __init__(self, cfg, device = torch.device("cpu")):
         self.cfg = cfg
-        self.mjcf_file = cfg.asset.assetFileName
+        # 尝试从不同的配置路径读取asset文件名，如果找不到则使用默认路径
+        try:
+            if hasattr(cfg, 'asset') and hasattr(cfg.asset, 'assetFileName'):
+                self.mjcf_file = cfg.asset.assetFileName
+                print(f"DEBUG: Using cfg.asset.assetFileName: {self.mjcf_file}")
+            elif hasattr(cfg, 'motion') and hasattr(cfg.motion, 'asset') and hasattr(cfg.motion.asset, 'assetFileName'):
+                self.mjcf_file = cfg.motion.asset.assetFileName
+                print(f"DEBUG: Using cfg.motion.asset.assetFileName: {self.mjcf_file}")
+            else:
+                # 默认使用G1 23DOF lock wrist模型
+                self.mjcf_file = "/home/harry/Desktop/PBHC_old/description/robots/g1/g1_23dof_lock_wrist_fitmotionONLY.xml"
+                print(f"DEBUG: Using default path: {self.mjcf_file}")
+        except Exception as e:
+            # 如果配置读取失败，使用默认路径
+            print(f"DEBUG: Exception occurred: {e}")
+            self.mjcf_file = "/home/harry/Desktop/PBHC_old/description/robots/g1/g1_23dof_lock_wrist_fitmotionONLY.xml"
+            print(f"DEBUG: Using fallback path: {self.mjcf_file}")
+        
+        # 如果是相对路径，转换为绝对路径
+        if not self.mjcf_file.startswith('/'):
+            # 如果只是文件名，使用G1模型目录
+            if '/' not in self.mjcf_file:
+                self.mjcf_file = f"/home/harry/Desktop/PBHC_old/description/robots/g1/{self.mjcf_file}"
+            else:
+                self.mjcf_file = f"/home/harry/Desktop/PBHC_old/{self.mjcf_file}"
+            print(f"DEBUG: Converted to absolute path: {self.mjcf_file}")
         
         parser = XMLParser(remove_blank_text=True)
         tree = parse(BytesIO(open(self.mjcf_file, "rb").read()), parser=parser,)
@@ -76,12 +103,15 @@ class Humanoid_Batch:
         
         self.dof_axis = torch.tensor(self.dof_axis)
 
-        for extend_config in cfg.extend_config:
-            self.body_names_augment += [extend_config.joint_name]
-            self._parents = torch.cat([self._parents, torch.tensor([self.body_names.index(extend_config.parent_name)]).to(device)], dim = 0)
-            self._offsets = torch.cat([self._offsets, torch.tensor([[extend_config.pos]]).to(device)], dim = 1)
-            self._local_rotation = torch.cat([self._local_rotation, torch.tensor([[extend_config.rot]]).to(device)], dim = 1)
-            self.num_extend_dof += 1
+        if hasattr(cfg, 'extend_config') and cfg.extend_config is not None:
+            for extend_config in cfg.extend_config:
+                self.body_names_augment += [extend_config.joint_name]
+                self._parents = torch.cat([self._parents, torch.tensor([self.body_names.index(extend_config.parent_name)]).to(device)], dim = 0)
+                self._offsets = torch.cat([self._offsets, torch.tensor([[extend_config.pos]]).to(device)], dim = 1)
+                self._local_rotation = torch.cat([self._local_rotation, torch.tensor([[extend_config.rot]]).to(device)], dim = 1)
+                self.num_extend_dof += 1
+        else:
+            print("DEBUG: No extend_config found in configuration")
             
         self.num_bodies = len(self.body_names)
         self.num_bodies_augment = len(self.body_names_augment)
@@ -184,7 +214,7 @@ class Humanoid_Batch:
         
         
         wbody_rot = tRot.wxyz_to_xyzw(tRot.matrix_to_quaternion(wbody_mat))
-        if len(self.cfg.extend_config) > 0:
+        if hasattr(self.cfg, 'extend_config') and self.cfg.extend_config is not None and len(self.cfg.extend_config) > 0:
             if return_full:
                 return_dict.global_velocity_extend = self._compute_velocity(wbody_pos, dt) 
                 return_dict.global_angular_velocity_extend = self._compute_angular_velocity(wbody_rot, dt)

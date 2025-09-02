@@ -1,0 +1,371 @@
+# @package _global_
+
+defaults:
+  - robot_base
+
+robot:
+  # Observation parameters
+  num_bodies: 27  # Viper机器人的body数量（包括扩展body）
+  dof_obs_size: 27  # Viper总关节数
+  actions_dim: 27   # 全部关节都可控制
+  lower_body_actions_dim: 15  # 腿部+腰部关节
+  upper_body_actions_dim: 12  # 手臂关节
+  policy_obs_dim: -1 
+  critic_obs_dim: -1
+
+  key_bodies: ["left_ankle_roll_link", "right_ankle_roll_link"]
+  contact_bodies: ["left_ankle_roll_link", "right_ankle_roll_link"]
+  num_feet: 2
+  right_foot_name: "right_ankle_roll_link"
+  left_foot_name: "left_ankle_roll_link"
+  foot_name: "ankle_roll_link"
+  knee_name: "knee_link"
+  has_torso: True
+  torso_name: "torso_link"
+  has_upper_body_dof: True
+  
+  # Viper 27个关节名称（基于viper_dance_config.yaml的default_dof_pos顺序）
+  dof_names: ['left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_ankle_pitch_joint', 'left_ankle_roll_joint',
+              'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint', 'right_knee_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint',
+              'torso_joint',
+              'left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_elbow_joint', 'left_wrist_roll_joint', 'left_wrist_pitch_joint', 'left_wrist_yaw_joint',
+              'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_elbow_joint', 'right_wrist_roll_joint', 'right_wrist_pitch_joint', 'right_wrist_yaw_joint']
+  
+  upper_dof_names: ['left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_elbow_joint', 'left_wrist_roll_joint', 'left_wrist_pitch_joint', 'left_wrist_yaw_joint',
+                    'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_elbow_joint', 'right_wrist_roll_joint', 'right_wrist_pitch_joint', 'right_wrist_yaw_joint']
+  
+  upper_left_arm_dof_names: ['left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_shoulder_yaw_joint', 'left_elbow_joint', 'left_wrist_roll_joint', 'left_wrist_pitch_joint', 'left_wrist_yaw_joint']
+  upper_right_arm_dof_names: ['right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_shoulder_yaw_joint', 'right_elbow_joint', 'right_wrist_roll_joint', 'right_wrist_pitch_joint', 'right_wrist_yaw_joint']
+  
+  lower_dof_names: ['left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_ankle_pitch_joint', 'left_ankle_roll_joint',
+                    'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint', 'right_knee_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint',
+                    'torso_joint']
+  
+  waist_dof_names: ['torso_joint']
+  
+  # 关节限制（基于Viper机器人的实际限制，需要根据实际URDF调整）
+  dof_pos_lower_limit_list: [-2.5, -0.5, -2.8, -0.1, -0.9, -0.3,   # 左腿
+                             -2.5, -0.5, -2.8, -0.1, -0.9, -0.3,   # 右腿
+                             -2.6,                                   # 腰部
+                             -3.1, -1.6, -2.6, -1.0, -1.5, -1.5, -1.5,  # 左臂
+                             -3.1, -1.6, -2.6, -1.0, -1.5, -1.5, -1.5]  # 右臂
+  
+  dof_pos_upper_limit_list: [2.9, 0.5, 2.8, 2.9, 0.5, 0.3,    # 左腿
+                             2.9, 0.5, 2.8, 2.9, 0.5, 0.3,    # 右腿
+                             2.6,                               # 腰部
+                             2.7, 1.6, 2.6, 2.1, 1.5, 1.5, 1.5,   # 左臂
+                             2.7, 1.6, 2.6, 2.1, 1.5, 1.5, 1.5]   # 右臂
+  
+  dof_vel_limit_list: [32.0, 20.0, 32.0, 20.0, 37.0, 37.0,   # 左腿
+                       32.0, 20.0, 32.0, 20.0, 37.0, 37.0,   # 右腿
+                       32.0,                                   # 腰部
+                       37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0,  # 左臂
+                       37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0]  # 右臂
+  
+  # 基于viper_dance_config.yaml的tau_limit
+  dof_effort_limit_list: [88.0, 88.0, 88.0, 139.0, 50.0, 50.0,   # 左腿
+                          88.0, 88.0, 88.0, 139.0, 50.0, 50.0,   # 右腿
+                          88.0,                                    # 腰部
+                          25.0, 25.0, 25.0, 25.0, 5.0, 5.0, 5.0,    # 左臂
+                          25.0, 25.0, 25.0, 25.0, 5.0, 5.0, 5.0]    # 右臂
+  
+  # only apply for isaacsim
+  dof_armature_list: [0.03, 0.03, 0.03, 0.03, 0.03, 0.03,   # 左腿
+                      0.03, 0.03, 0.03, 0.03, 0.03, 0.03,   # 右腿
+                      0.03,                                   # 腰部
+                      0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03,  # 左臂
+                      0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]  # 右臂
+  
+  # only apply for isaacsim
+  dof_joint_friction_list: [0.03, 0.03, 0.03, 0.03, 0.03, 0.03,   # 左腿
+                            0.03, 0.03, 0.03, 0.03, 0.03, 0.03,   # 右腿
+                            0.03,                                   # 腰部
+                            0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03,  # 左臂
+                            0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]  # 右臂
+
+  body_names: ['pelvis', 
+                'left_hip_pitch_link', 'left_hip_roll_link', 'left_hip_yaw_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link',
+                'right_hip_pitch_link', 'right_hip_roll_link', 'right_hip_yaw_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link',
+                'torso_link',
+                'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link', 'left_wrist_roll_link', 'left_wrist_pitch_link', 'left_wrist_yaw_link',
+                'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link', 'right_wrist_roll_link', 'right_wrist_pitch_link', 'right_wrist_yaw_link']
+
+  terminate_after_contacts_on: ["pelvis", "shoulder", "hip"]
+  penalize_contacts_on: ["pelvis", "shoulder", "hip", "torso", "waist", "elbow"]
+  
+  init_state:
+    pos: [0.0, 0.0, 0.8] # x,y,z [m]
+    rot: [0.0, 0.0, 0.0, 1.0] # x,y,z,w [quat] 
+    lin_vel: [0.0, 0.0, 0.0]  # x,y,z [m/s]
+    ang_vel: [0.0, 0.0, 0.0]  # x,y,z [rad/s]
+    
+    # 基于viper_dance_config.yaml的default_dof_pos
+    default_joint_angles: # = target angles [rad] when action = 0.0
+      left_hip_pitch_joint: -0.1
+      left_hip_roll_joint: 0.0
+      left_hip_yaw_joint: 0.0
+      left_knee_joint: 0.3
+      left_ankle_pitch_joint: -0.2
+      left_ankle_roll_joint: 0.0
+      right_hip_pitch_joint: -0.1
+      right_hip_roll_joint: 0.0
+      right_hip_yaw_joint: 0.0
+      right_knee_joint: 0.3
+      right_ankle_pitch_joint: -0.2
+      right_ankle_roll_joint: 0.0
+      torso_joint: 0.0
+      left_shoulder_pitch_joint: 0.0
+      left_shoulder_roll_joint: 0.0
+      left_shoulder_yaw_joint: 0.0
+      left_elbow_joint: 0.0
+      left_wrist_pitch_joint: 0.0
+      left_wrist_roll_joint: 0.0
+      left_wrist_yaw_joint: 0.0
+      right_shoulder_pitch_joint: 0.0
+      right_shoulder_roll_joint: 0.0
+      right_shoulder_yaw_joint: 0.0
+      right_elbow_joint: 0.0
+      right_wrist_pitch_joint: 0.0
+      right_wrist_roll_joint: 0.0
+      right_wrist_yaw_joint: 0.0
+
+  control:
+    control_type: P
+    # PD Drive parameters (基于viper_dance_config.yaml的kps和kds):
+    stiffness: # [N*m/rad]
+      hip_yaw: 130
+      hip_roll: 130
+      hip_pitch: 130
+      knee: 150
+      ankle_pitch: 30
+      ankle_roll: 30
+      torso: 180
+      shoulder_pitch: 80
+      shoulder_roll: 80
+      shoulder_yaw: 50
+      elbow: 80
+      wrist_pitch: 100
+      wrist_roll: 100
+      wrist_yaw: 100
+
+    damping: # [N*m*s/rad] (基于viper_dance_config.yaml的kds)
+      hip_yaw: 2.0
+      hip_roll: 2.0
+      hip_pitch: 2.0
+      knee: 2.0
+      ankle_pitch: 0.5
+      ankle_roll: 0.5
+      torso: 3.0
+      shoulder_pitch: 3.0
+      shoulder_roll: 3.0
+      shoulder_yaw: 3.0
+      elbow: 3.0
+      wrist_pitch: 3.0
+      wrist_roll: 3.0
+      wrist_yaw: 3.0
+
+    # action scale: target angle = actionScale * action + defaultAngle
+    action_scale: 0.25  # 与viper_dance_config.yaml一致
+    action_clip_value: 100.0
+    clip_torques: True
+
+  asset:
+    collapse_fixed_joints: True
+    replace_cylinder_with_capsule: True
+    flip_visual_attachments: False
+    armature: 0.001
+    thickness: 0.01
+    max_angular_velocity: 1000.
+    max_linear_velocity: 1000.
+    density: 0.001
+    angular_damping: 0.
+    linear_damping: 0.
+
+    # Viper机器人模型文件
+    urdf_file: "viper/${robot.asset.robot_type}.urdf"
+    usd_file: "viper/${robot.asset.robot_type}.usd"
+    xml_file: "viper/${robot.asset.robot_type}.xml"
+    robot_type: viper_27dof
+    self_collisions: 0 # 1 to disable, 0 to enable self collisions
+    default_dof_drive_mode: 3
+
+    fix_base_link: False
+
+  motion:
+    motion_lib_type: 'WJX'
+    motion_file: ???
+    asset:
+      assetRoot: "description/robots/viper/"
+      assetFileName: "viper_27dof.xml"
+
+    humanoid_type: viper_27dof
+    bias_offset: False
+    has_self_collision: True
+    has_mesh: False
+    has_jt_limit: False
+    has_dof_subset: True
+    has_upright_start: True
+    has_smpl_pd_offset: False
+    remove_toe: False
+    motion_sym_loss: False
+    sym_loss_coef: 1
+    big_ankle: True
+
+    has_shape_obs: false
+    has_shape_obs_disc: false
+    has_shape_variation: False
+
+    masterfoot: False
+    freeze_toe: false
+    freeze_hand: False
+    box_body: True
+    real_weight: True
+    real_weight_porpotion_capsules: True
+    real_weight_porpotion_boxes: True
+
+    body_names: ['pelvis', 
+                 'left_hip_pitch_link', 'left_hip_roll_link', 'left_hip_yaw_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link', 
+                 'right_hip_pitch_link', 'right_hip_roll_link', 'right_hip_yaw_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link', 
+                 'torso_link',
+                 'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link', 'left_wrist_roll_link', 'left_wrist_pitch_link', 'left_wrist_yaw_link',
+                 'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link', 'right_wrist_roll_link', 'right_wrist_pitch_link', 'right_wrist_yaw_link']
+          
+    limb_weight_group: 
+      - ['left_hip_pitch_link', 'left_hip_roll_link', 'left_hip_yaw_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link']
+      - ['right_hip_pitch_link', 'right_hip_roll_link', 'right_hip_yaw_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link']
+      - ['pelvis', 'torso_link']
+      - ['left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link', 'left_wrist_roll_link', 'left_wrist_pitch_link', 'left_wrist_yaw_link']
+      - ['right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link', 'right_wrist_roll_link', 'right_wrist_pitch_link', 'right_wrist_yaw_link']
+
+    dof_names: ['left_hip_pitch_link', 'left_hip_roll_link', 'left_hip_yaw_link', 'left_knee_link', 'left_ankle_pitch_link', 'left_ankle_roll_link', 
+                'right_hip_pitch_link', 'right_hip_roll_link', 'right_hip_yaw_link', 'right_knee_link', 'right_ankle_pitch_link', 'right_ankle_roll_link', 
+                'torso_link',
+                'left_shoulder_pitch_link', 'left_shoulder_roll_link', 'left_shoulder_yaw_link', 'left_elbow_link', 'left_wrist_roll_link', 'left_wrist_pitch_link', 'left_wrist_yaw_link',
+                'right_shoulder_pitch_link', 'right_shoulder_roll_link', 'right_shoulder_yaw_link', 'right_elbow_link', 'right_wrist_roll_link', 'right_wrist_pitch_link', 'right_wrist_yaw_link']
+    
+    right_foot_name: 'right_ankle_roll_link'
+    left_foot_name: 'left_ankle_roll_link'
+
+    nums_extend_bodies: 3
+    extend_config:
+      - joint_name: "left_hand_link"
+        parent_name: "left_wrist_yaw_link"
+        pos: [0.15, 0.0, 0.0]
+        rot: [1.0, 0.0, 0.0, 0.0] # w x y z
+      - joint_name: "right_hand_link"
+        parent_name: "right_wrist_yaw_link"
+        pos: [0.15, 0.0, 0.0]
+        rot: [1.0, 0.0, 0.0, 0.0] # w x y z
+      - joint_name: "head_link"
+        parent_name: "torso_link"
+        pos: [0.0, 0.0, 0.35]
+        rot: [1.0, 0.0, 0.0, 0.0] # w x y z
+
+    motion_tracking_link:
+      - "left_hand_link"
+      - "right_hand_link"
+      - "head_link"
+
+    lower_body_link:
+      - "pelvis"
+      - "left_hip_pitch_link"
+      - "left_hip_roll_link"
+      - "left_hip_yaw_link"
+      - "left_knee_link"
+      - "left_ankle_pitch_link"
+      - "left_ankle_roll_link"
+      - "right_hip_pitch_link"
+      - "right_hip_roll_link"
+      - "right_hip_yaw_link"
+      - "right_knee_link"
+      - "right_ankle_pitch_link"
+      - "right_ankle_roll_link"
+      - "torso_link"
+
+    upper_body_link:
+      - "left_shoulder_pitch_link"
+      - "left_shoulder_roll_link"
+      - "left_shoulder_yaw_link"
+      - "left_elbow_link"
+      - "left_wrist_pitch_link"
+      - "left_wrist_roll_link"
+      - "left_wrist_yaw_link"
+      - "right_shoulder_pitch_link"
+      - "right_shoulder_roll_link"
+      - "right_shoulder_yaw_link"
+      - "right_elbow_link"
+      - "right_wrist_pitch_link"
+      - "right_wrist_roll_link"
+      - "right_wrist_yaw_link"
+      - "left_hand_link"
+      - "right_hand_link"
+      - "head_link"
+
+    pelvis_link: "pelvis"
+    base_link: "torso_link"
+    hips_link:
+      - "left_hip_pitch_link"
+      - "left_hip_roll_link"
+      - "left_hip_yaw_link"
+      - "right_hip_pitch_link"
+      - "right_hip_roll_link"
+      - "right_hip_yaw_link"
+    
+    joint_matches:
+      - ["pelvis", "Pelvis"]
+      - ["left_hip_pitch_link", "L_Hip"]
+      - ["left_knee_link", "L_Knee"]
+      - ["left_ankle_roll_link", "L_Ankle"]
+      - ["right_hip_pitch_link", "R_Hip"]
+      - ["right_knee_link", "R_Knee"]
+      - ["right_ankle_roll_link", "R_Ankle"]
+      - ["left_shoulder_roll_link", "L_Shoulder"]
+      - ["left_elbow_link", "L_Elbow"]
+      - ["left_hand_link", "L_Hand"]
+      - ["right_shoulder_roll_link", "R_Shoulder"]
+      - ["right_elbow_link", "R_Elbow"]
+      - ["right_hand_link", "R_Hand"]
+      - ["head_link", "Head"]
+
+    smpl_pose_modifier:
+      - Pelvis: "[np.pi/2, 0, np.pi/2]"
+      - L_Shoulder: "[0, 0, -np.pi/2]"
+      - R_Shoulder: "[0, 0, np.pi/2]"
+      - L_Elbow: "[0, -np.pi/2, 0]"
+      - R_Elbow: "[0, np.pi/2, 0]"
+
+    visualization:
+      customize_color: True
+      marker_joint_colors: 
+      - [0.2, 0.6, 0.8] # pelvis
+      - [0.2, 0.6, 0.8] # left_hip_pitch_joint
+      - [0.2, 0.6, 0.8] # left_hip_roll_joint
+      - [0.2, 0.6, 0.8] # left_hip_yaw_joint
+      - [0.2, 0.6, 0.8] # left_knee_joint
+      - [0.2, 0.6, 0.8] # left_ankle_pitch_joint
+      - [0.2, 0.6, 0.8] # left_ankle_roll_joint
+      - [0.2, 0.6, 0.8] # right_hip_pitch_joint
+      - [0.2, 0.6, 0.8] # right_hip_roll_joint
+      - [0.2, 0.6, 0.8] # right_hip_yaw_joint
+      - [0.2, 0.6, 0.8] # right_knee_joint
+      - [0.2, 0.6, 0.8] # right_ankle_pitch_joint
+      - [0.2, 0.6, 0.8] # right_ankle_roll_joint
+      - [0.2, 0.6, 0.8] # waist_yaw_joint
+      - [0.2, 0.6, 0.8] # torso_link
+      - [0.8, 0.4, 0.2] # left_shoulder_pitch_joint
+      - [0.8, 0.4, 0.2] # left_shoulder_roll_joint
+      - [0.8, 0.4, 0.2] # left_shoulder_yaw_joint
+      - [0.8, 0.4, 0.2] # left_elbow_joint
+      - [0.8, 0.4, 0.2] # left_wrist_pitch_joint
+      - [0.8, 0.4, 0.2] # left_wrist_roll_joint
+      - [0.8, 0.4, 0.2] # left_wrist_yaw_joint
+      - [0.8, 0.4, 0.2] # right_shoulder_pitch_joint
+      - [0.8, 0.4, 0.2] # right_shoulder_roll_joint
+      - [0.8, 0.4, 0.2] # right_shoulder_yaw_joint
+      - [0.8, 0.4, 0.2] # right_elbow_joint
+      - [0.8, 0.4, 0.2] # right_wrist_pitch_joint
+      - [0.8, 0.4, 0.2] # right_wrist_roll_joint
+      - [0.8, 0.4, 0.2] # right_wrist_yaw_joint
+      - [0, 0.351, 0.613] # left_hand_link
+      - [0, 0.351, 0.613] # right_hand_link
+      - [0, 0.351, 0.613] # head_link 

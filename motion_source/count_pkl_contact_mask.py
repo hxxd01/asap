@@ -68,10 +68,16 @@ def process_motion(motion, cfg):
 
     fk_return = humanoid_fk.fk_batch(pose_aa, root_trans)
 
-    feet_l, feet_r = foot_detect(fk_return.global_translation_extend[0])
+    # 根据配置使用正确的属性名
+    if hasattr(fk_return, 'global_translation_extend'):
+        global_translation = fk_return.global_translation_extend[0]
+    else:
+        global_translation = fk_return.global_translation[0]
+    
+    feet_l, feet_r = foot_detect(global_translation)
 
     motion['contact_mask'] = np.concatenate([feet_l,feet_r],axis=-1)
-    motion['smpl_joints'] = fk_return.global_translation_extend[0].detach().numpy()
+    motion['smpl_joints'] = global_translation.detach().numpy()
 
     return motion
 

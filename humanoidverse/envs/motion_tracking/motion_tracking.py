@@ -34,7 +34,7 @@ class WholeBodyState:
     # root_quat: torch.Tensor # XYZW
     # root_ang_vel: torch.Tensor
     root_state: torch.Tensor
-    # dof_state: torch.Tensor
+    # dof_state: torch.TensorA
     dof_pos: torch.Tensor
     dof_vel: torch.Tensor
     
@@ -111,7 +111,8 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         self._init_save_motion()
 
         if self.config.use_teleop_control:
-            self.teleop_marker_coords = torch.zeros(self.num_envs, 3, 3, dtype=torch.float, device=self.device, requires_grad=False)
+            num_tracking_points = len(self.config.robot.motion.motion_tracking_link)
+            self.teleop_marker_coords = torch.zeros(self.num_envs, num_tracking_points, 3, dtype=torch.float, device=self.device, requires_grad=False)
             import rclpy
             from rclpy.node import Node
             from std_msgs.msg import Float64MultiArray
@@ -252,9 +253,10 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
     def _init_buffers(self):
         super()._init_buffers()
         self._init_adaptive_sigma()
-        self.vr_3point_marker_coords = torch.zeros(self.num_envs, 3, 3, dtype=torch.float, device=self.device, requires_grad=False)
-        self.realtime_vr_keypoints_pos = torch.zeros(3, 3, dtype=torch.float, device=self.device, requires_grad=False) # hand, hand, head
-        self.realtime_vr_keypoints_vel = torch.zeros(3, 3, dtype=torch.float, device=self.device, requires_grad=False) # hand, hand, head
+        num_tracking_points = len(self.config.robot.motion.motion_tracking_link)
+        self.vr_3point_marker_coords = torch.zeros(self.num_envs, num_tracking_points, 3, dtype=torch.float, device=self.device, requires_grad=False)
+        self.realtime_vr_keypoints_pos = torch.zeros(num_tracking_points, 3, dtype=torch.float, device=self.device, requires_grad=False)
+        self.realtime_vr_keypoints_vel = torch.zeros(num_tracking_points, 3, dtype=torch.float, device=self.device, requires_grad=False)
         self.motion_ids = torch.arange(self.num_envs).to(self.device)
         self.motion_start_times = torch.zeros(self.num_envs, dtype=torch.float32, device=self.device, requires_grad=False)
         self.motion_len = torch.zeros(self.num_envs, dtype=torch.float32, device=self.device, requires_grad=False)
@@ -729,7 +731,8 @@ class LeggedRobotMotionTracking(LeggedRobotBase):
         else:
             ref_vr_3point_pos = self.teleop_marker_coords
         vr_2root_pos = (ref_vr_3point_pos - self.simulator.robot_root_states[:, 0:3].view(env_batch_size, 1, 3))
-        heading_inv_rot_vr = heading_inv_rot.repeat(3,1)
+        num_vr_points = len(self.motion_tracking_id)  # 动态获取VR点数量
+        heading_inv_rot_vr = heading_inv_rot.repeat(num_vr_points,1)
         self._obs_vr_3point_pos = my_quat_rotate(heading_inv_rot_vr.view(-1, 4), vr_2root_pos.view(-1, 3)).view(env_batch_size, -1)
         
         

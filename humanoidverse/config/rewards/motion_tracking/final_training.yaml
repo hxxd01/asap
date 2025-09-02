@@ -44,18 +44,16 @@ rewards:
   desired_feet_max_height_for_this_air: 0.2
 
   reward_tracking_sigma:
-    teleop_max_joint_pos: 0.4
-
-    teleop_upper_body_pos: 0.003
-    teleop_lower_body_pos: 0.003
-    teleop_vr_3point_pos: 0.003
-    teleop_feet_pos: 0.002
-
-    teleop_body_rot: 0.02
-    teleop_body_vel: 0.1
-    teleop_body_ang_vel: 2.5
-    teleop_joint_pos: 0.03
-    teleop_joint_vel: 5
+    teleop_upper_body_pos: 0.002668
+    teleop_lower_body_pos: 0.002309
+    teleop_vr_3point_pos: 0.003153
+    teleop_feet_pos: 0.002444
+    teleop_body_rot: 0.198064
+    teleop_body_vel: 0.192639
+    teleop_body_ang_vel: 6.427135
+    teleop_joint_pos: 0.054749
+    teleop_joint_vel: 9.286291
+    teleop_max_joint_pos: 0.682281
 
   adaptive_tracking_sigma:
     enable: True

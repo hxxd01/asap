@@ -1,0 +1,1888 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="viper">
+  <mujoco>
+    <compiler meshdir="../meshes" discardvisual="false"/>
+  </mujoco>
+
+    <!-- [CAUTION] uncomment when convert to mujoco -->
+    <!-- <link name="world"></link>
+    <joint name="floating_base_joint" type="floating">
+      <parent link="world"/>
+      <child link="pelvis"/>
+    </joint> -->
+
+
+  <link name="pelvis">
+    <inertial>
+      <origin
+        xyz="-0.00143385 0.00003031 -0.07902178"   
+        rpy="0 0 0" />
+      <mass
+        value="3.167" />
+      <inertia
+        ixx="0.0124117919916876"
+        ixy="2.06196849015391E-05"
+        ixz="0.000107370469780252"
+        iyy="0.0113126311707194"
+        iyz="-9.19920108357276E-05"
+        izz="0.00653772686865329" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/pelvis.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/pelvis1.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link
+    name="left_hip_pitch_link">
+    <inertial>
+      <origin
+        xyz="0.00294365 0.04179258 -0.02026734"    
+        rpy="0 0 0" />
+      <mass
+        value="1.18" />
+      <inertia
+        ixx="0.00273341902799656"
+        ixy="-5.35214243404435E-05"
+        ixz="8.96769527044620e-05"
+        iyy="0.00127943910221939"
+        iyz="0.000557745255224432"
+        izz="0.00227672190011584" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/left_hip_pitch_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_hip_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_hip_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="0.00030096 0.05920113 -0.125"
+      rpy="0 0 0" />
+    <parent
+      link="pelvis" />
+    <child
+      link="left_hip_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_hip_roll_link">
+    <inertial>
+      <origin
+        xyz="0.00259764 -0.00094378 -0.06161750"    
+        rpy="0 0 0" />
+      <mass
+        value="1.451" />
+      <inertia
+        ixx="0.00449292488745447"
+        ixy="1.03472385610151E-05"
+        ixz="-4.10591771640006E-05"
+        iyy="0.00445751989620832"
+        iyz="-2.12809352696203E-06"
+        izz="0.00216355516825041"/>
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_hip_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_hip_roll_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_hip_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0.032757 0.0643 -0.020074"
+      rpy="0 -0.34627 0" />
+    <parent
+      link="left_hip_pitch_link" />
+    <child
+      link="left_hip_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5"
+      upper="1.5"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_hip_yaw_link">
+    <inertial>
+      <origin
+        xyz="-0.04335651 -0.00783320 -0.11574897"   
+        rpy="0 0 0" />
+      <mass
+        value="1.673" />
+      <inertia
+        ixx="0.0118302487122300"
+        ixy="-7.42063308538882E-05"
+        ixz="-0.00441548094409927"
+        iyy="0.0148190648145451"
+        iyz="-0.000192378775340562"
+        izz="0.00437090650477111" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_hip_yaw_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_hip_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_hip_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="-0.0037947 -0.001274 -0.12405"
+      rpy="0 0 0" />
+    <parent
+      link="left_hip_roll_link" />
+    <child
+      link="left_hip_yaw_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_knee_link">
+    <inertial>
+      <origin
+        xyz="-0.01841342 -0.01178721 -0.10798605"      
+        rpy="0 0 0" />
+      <mass
+        value="2.159" />
+      <inertia
+        ixx="0.0146261773809946"
+        ixy="-0.000109987869458191"
+        ixz="-0.00165574240332692"
+        iyy="0.0155308952628519"
+        iyz="-0.000509258055720592"
+        izz="0.00223691738269302" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_knee_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/left_knee_link1.STL" />
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin
+        xyz="-0.03 -0.015 -0.18"
+        rpy="0 0.2 0" />
+      <geometry>
+        <cylinder radius="0.04" length="0.2"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_knee_joint"
+    type="revolute">
+    <origin
+      xyz="-0.078275 0.022607 -0.17729"
+      rpy="0 0.34627 0" />
+    <parent
+      link="left_hip_yaw_link" />
+    <child
+      link="left_knee_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.0"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_ankle_pitch_link">
+    <inertial>
+      <origin
+        xyz="-0.00233233 -0.00041874 -0.00766284"  
+        rpy="0 0 0" />
+      <mass
+        value="0.172" />
+      <inertia
+        ixx="1.88123855084983E-05"
+        ixy="1.65485541335953E-07"
+        ixz="-1.89058757912056E-06"
+        iyy="3.09505581757961E-05"
+        iyz="5.34103407043641E-07"
+        izz="2.61970566642426E-05"/>
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_ankle_pitch_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_ankle_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_ankle_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="-0.058172 -0.014418 -0.29438"
+      rpy="0 0 0" />
+    <parent
+      link="left_knee_link" />
+    <child
+      link="left_ankle_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1."
+      upper="0.5"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_ankle_roll_link">
+    <inertial>
+      <origin
+        xyz="0.03070221 -0.00012314 -0.02375913"   
+        rpy="0 0 0" />
+      <mass
+        value="0.624" />
+      <inertia
+         ixx="0.000296598682733620"
+        ixy="-1.28740535665962E-07"
+        ixz="7.99607987435994E-05"
+        iyy="0.00199006054340695"
+        iyz="-2.16314507240388E-07"
+        izz="0.00207465075718900"/>
+    </inertial>
+      <!-- <inertia
+        ixx="0.00296598682733620"
+        ixy="-1.28740535665962E-07"
+        ixz="7.99607987435994E-05"
+        iyy="0.00399006054340695"
+        iyz="-2.16314507240388E-07"
+        izz="0.00407465075718900"/>
+    </inertial> -->
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_ankle_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_ankle_roll_link.STL" />
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin xyz="-0.05 0.022 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.05 -0.022 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.12 0.03 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.12 -0.03 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.14 0.0 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.06 0.0 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <!-- <collision>
+      <origin
+        xyz="0.034 0 -0.029"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.13 0.056 0.02"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="-0.025 0 -0.03"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.03 0.0571 0.02"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="-0.033 0 -0.03"
+        rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.0293" length="0.02"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="0.076 0 -0.0325"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.06 0.07 0.015"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="0.11  0 -0.0325"
+        rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.034" length="0.015"/>
+      </geometry>
+    </collision> -->
+
+  </link>
+  <joint
+    name="left_ankle_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 -0.015"
+      rpy="0 0 0" />
+    <parent
+      link="left_ankle_pitch_link" />
+    <child
+      link="left_ankle_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-0.3"
+      upper="0.3"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_hip_pitch_link">
+    <inertial>
+      <origin
+        xyz="0.00294365 -0.04179258 -0.02026734"    
+        rpy="0 0 0" />
+      <mass
+        value="1.18" />
+      <inertia
+        ixx="0.00273341902799656"
+        ixy="5.35214243404435E-05"
+        ixz="8.96769527044620e-05"
+        iyy="0.00127943910221939"
+        iyz="-0.000557745255224432"
+        izz="0.00227672190011584" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/right_hip_pitch_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_hip_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_hip_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="0.00030096 -0.05920113 -0.125"
+      rpy="0 0 0" />
+    <parent
+      link="pelvis" />
+    <child
+      link="right_hip_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_hip_roll_link">
+    <inertial>
+      <origin
+       xyz="0.00259764 0.00094378 -0.06161750"    
+        rpy="0 0 0" />
+      <mass
+        value="1.451" />
+      <inertia
+        ixx="0.00449292488745447"
+        ixy="-1.03472385610151E-05"
+        ixz="-4.10591771640006E-05"
+        iyy="0.00445751989620832"
+        iyz="2.12809352696203E-06"
+        izz="0.00216355516825041"/>
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_hip_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_hip_roll_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_hip_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0.032757 -0.0643 -0.020074"
+      rpy="0 -0.34627 0" />
+    <parent
+      link="right_hip_pitch_link" />
+    <child
+      link="right_hip_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5"
+      upper="1.5"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_hip_yaw_link">
+    <inertial>
+      <origin
+        xyz="-0.04335651 0.00783320 -0.11574897"   
+        rpy="0 0 0" />
+      <mass
+        value="1.673" />
+      <inertia
+        ixx="0.0118302487122300"
+        ixy="7.42063308538882E-05"
+        ixz="-0.00441548094409927"
+        iyy="0.0148190648145451"
+        iyz="0.000192378775340562"
+        izz="0.00437090650477111" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_hip_yaw_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_hip_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_hip_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="-0.0037947 0.001274 -0.12405"
+      rpy="0 0 0" />
+    <parent
+      link="right_hip_roll_link" />
+    <child
+      link="right_hip_yaw_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_knee_link">
+    <inertial>
+      <origin
+        xyz="-0.01841342  0.01178721 -0.10798605"      
+        rpy="0 0 0" />
+      <mass
+        value="2.159" />
+      <inertia
+        ixx="0.0146261773809946"
+        ixy="0.000109987869458191"
+        ixz="-0.00165574240332692"
+        iyy="0.0155308952628519"
+        iyz="0.000509258055720592"
+        izz="0.00223691738269302" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_knee_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/right_knee_link1.STL" />
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin
+        xyz="-0.03 0.015 -0.18"
+        rpy="0 0.2 0" />
+      <geometry>
+        <cylinder radius="0.04" length="0.20"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_knee_joint"
+    type="revolute">
+    <origin
+      xyz="-0.078272 -0.022607 -0.17729"
+      rpy="0 0.34627 0" />
+    <parent
+      link="right_hip_yaw_link" />
+    <child
+      link="right_knee_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.0"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_ankle_pitch_link">
+    <inertial>
+      <origin
+        xyz="-0.00233233 0.00041874 -0.00766284"  
+        rpy="0 0 0" />
+      <mass
+        value="0.172" />
+      <inertia
+        ixx="1.88123855084983E-05"
+        ixy="-1.65485541335953E-07"
+        ixz="-1.89058757912056E-06"
+        iyy="3.09505581757961E-05"
+        iyz="-5.34103407043641E-07"
+        izz="2.61970566642426E-05"/>
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_ankle_pitch_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_ankle_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_ankle_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="-0.058172 0.0145 -0.29437"
+      rpy="0 0 0" />
+    <parent
+      link="right_knee_link" />
+    <child
+      link="right_ankle_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.0"
+      upper="0.5"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_ankle_roll_link">
+    <inertial>
+      <origin
+        xyz="0.03070221 0.00012314 -0.02375913"   
+        rpy="0 0 0" />
+      <mass
+        value="0.624" />
+      <inertia
+        ixx="0.000296598682733620"
+        ixy="1.28740535665962E-07"
+        ixz="7.99607987435994E-05"
+        iyy="0.00199006054340695"
+        iyz="2.16314507240388E-07"
+        izz="0.00207465075718900"/>
+    </inertial>
+    <!-- <inertia
+    ixx="0.00296598682733620"
+    ixy="1.28740535665962E-07"
+    ixz="7.99607987435994E-05"
+    iyy="0.00399006054340695"
+    iyz="2.16314507240388E-07"
+    izz="0.00407465075718900"/>
+</inertial> -->
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_ankle_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_ankle_roll_link.STL" />
+      </geometry>
+    </collision> -->
+<collision>
+      <origin xyz="-0.05 0.022 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.05 -0.022 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.12 0.03 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.12 -0.03 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.14 0.0 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.06 0.0 -0.035" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+
+    <!-- <collision>
+      <origin
+        xyz="0.034 0 -0.029"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.13 0.056 0.02"/>
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin
+        xyz="-0.025 0 -0.03"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.03 0.0571 0.02"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="-0.033 0 -0.03"
+        rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.0293" length="0.02"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="0.076 0 -0.0325"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.06 0.07 0.015"/>
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin
+        xyz="0.11  0 -0.0325"
+        rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.034" length="0.015"/>
+      </geometry>
+    </collision> -->
+
+  </link>
+  <joint
+    name="right_ankle_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 -0.015"
+      rpy="0 0 0" />
+    <parent
+      link="right_ankle_pitch_link" />
+    <child
+      link="right_ankle_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-0.3"
+      upper="0.3"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="torso_link">
+    <inertial>
+      <origin
+        xyz="0.00683790 0.00144582 0.15534611" 
+        rpy="0 0 0" />
+      <mass
+        value="7.4032" />
+      <inertia
+        ixx="0.0712892448435346"
+        ixy="1.39253656386823E-06"
+        ixz="-0.00111167104837134"
+        iyy="0.0522607922322831"
+        iyz="0.000107726467150074"
+        izz="0.0361409127849960" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/torso_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/torso_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="torso_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="pelvis" />
+    <child
+      link="torso_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-2.618"
+      upper="2.618"
+      effort="88"
+      velocity="100" />
+  </joint>
+  <link
+    name="head_link">
+    <inertial>
+      <origin
+        xyz="0.01447544 0.00007824 -0.02809839"   
+        rpy="0 0 0" />
+      <mass
+        value="1.06" />
+      <inertia
+        ixx="0.004597145097379"
+        ixy="4.16407031963377e-06"
+        ixz="-0.000301076162284178"
+        iyy="0.00467078963283646"
+        iyz="-1.45207070911834e-06"
+        izz="0.00202144530241576" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/head_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/head_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="head_joint"
+    type="fixed">
+    <origin
+      xyz="0 0 0.050445"
+      rpy="0 0 0" />
+    <parent
+      link="torso_link" />
+    <child
+      link="head_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="left_shoulder_pitch_link">
+    <inertial>
+      <origin
+        xyz="-0.00069707 0.03688965 -0.01227664" 
+        rpy="0 0 0" />
+      <mass
+        value="0.5323" />
+      <inertia
+        ixx="0.000342480344495735"
+        ixy="2.56831163727392E-08"
+        ixz="-1.13402514447074E-06"
+        iyy="0.000348656968923099"
+        iyz="1.97851626968570E-05"
+        izz="0.000331192689181065" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/left_shoulder_pitch_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_shoulder_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_shoulder_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="0.0037451 0.10806 0.26149"
+      rpy="0.27925 0 0" />
+    <parent
+      link="torso_link" />
+    <child
+      link="left_shoulder_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="25"
+      velocity="10" />
+  </joint>
+  <link
+    name="left_shoulder_roll_link">
+    <inertial>
+      <origin
+        xyz="-0.00323926 0.00686758 -0.01965515" 
+        rpy="0 0 0" />
+      <mass
+        value="0.1828" />
+      <inertia
+        ixx="0.000191412879474143"
+        ixy="-4.06487854541431E-06"
+        ixz="1.19448193369323E-05"
+        iyy="0.000279390822677912"
+        iyz="2.22918529879459E-05"
+        izz="0.000218296298542506" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_shoulder_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_shoulder_roll_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_shoulder_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.03895 -0.013831"
+      rpy="-0.27925 0 0" />
+    <parent
+      link="left_shoulder_pitch_link" />
+    <child
+      link="left_shoulder_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-0.00001"
+      upper="1.5708"
+      effort="25"
+      velocity="10" />
+  </joint>
+  <link
+    name="left_shoulder_yaw_link">
+    <inertial>
+      <origin
+        xyz="0.00661072 -0.00003254 -0.07523086"  
+        rpy="0 0 0" />
+      <mass
+        value="0.9759" />
+      <inertia
+        ixx="0.00299173256160441"
+        ixy="-1.58914998275873E-06"
+        ixz="0.000358591432894295"
+        iyy="0.00308387691899268"
+        iyz="3.65316797813064E-06"
+        izz="0.000567720560393480" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_shoulder_yaw_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_shoulder_yaw_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_shoulder_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.0090715 -0.055231"
+      rpy="0 0 0" />
+    <parent
+      link="left_shoulder_roll_link" />
+    <child
+      link="left_shoulder_yaw_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="25"
+      velocity="10" />
+  </joint>
+  <link
+    name="left_elbow_link">
+    <inertial>
+      <origin
+        xyz="0.06532523 -0.01640403 -0.00839120" 
+        rpy="0 0 0" />
+      <mass
+        value="0.5165" />
+      <inertia
+        ixx="0.000282369741390714"
+        ixy="0.000104639067114739"
+        ixz="2.70023295050959E-05"
+        iyy="0.000485819825613672"
+        iyz="-8.77470934667060E-06"
+        izz="0.000499360430625774" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_elbow_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_elbow_link.STL" />
+      </geometry>
+    </collision> -->
+    <!-- <collision>
+      <origin
+        xyz="0.11 0 -0.01"
+        rpy="0 1.5708 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.27"/>
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_elbow_joint"
+    type="revolute">
+    <origin
+      xyz="0.015288 0.0056182 -0.1281"
+      rpy="0 0 0" />
+    <parent
+      link="left_shoulder_yaw_link" />
+    <child
+      link="left_elbow_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.0472"
+      upper="2.0944"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_wrist_roll_link">
+    <inertial>
+      <origin
+        xyz="0.01759288 0.00097906 0.00000720"   
+        rpy="0 0 0" />
+      <mass
+        value="0.0958" />
+      <inertia
+        ixx="6.20405323525282E-05"
+        ixy="-3.06457805534962E-06"
+        ixz="-1.28640545324359E-09"
+        iyy="5.00794691812744E-05"
+        iyz="-5.07800448943123E-09"
+        izz="7.85799984408735E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_wrist_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_wrist_roll_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_wrist_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0.10208 0.0026623 -0.0093385"
+      rpy="0 0 0" />
+    <parent
+      link="left_elbow_link" />
+    <child
+      link="left_wrist_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>  
+  <link
+    name="left_wrist_pitch_link">
+    <inertial>
+      <origin
+        xyz="0.02873505 -0.00007773 -0.00045152"  
+        rpy="0 0 0" />
+      <mass
+        value="0.7363" />
+      <inertia
+        ixx="0.000370568488183256"
+        ixy="-1.35478761657052E-06"
+        ixz="8.06606238768961E-06"
+        iyy="0.00125028790315572"
+        iyz="2.34859455161790E-08"
+        izz="0.00122207360937382" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_wrist_pitch_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_wrist_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_wrist_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="0.040949 0.001 0"
+      rpy="0 0 0" />
+    <parent
+      link="left_wrist_roll_link" />
+    <child
+      link="left_wrist_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-0.44"
+      upper="0.44"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="left_wrist_yaw_link">
+    <inertial>
+      <origin
+        xyz="0.02390958 0.00004407 0.00056329"
+        rpy="0 0 0" />
+      <mass
+        value="0.0958" />
+      <inertia
+        ixx="6.51109124046462E-05"
+        ixy="1.77908981617937E-09"
+        ixz="-1.96551104782961E-06"
+        iyy="8.04199992536036E-05"
+        iyz="4.95192253119594E-10"
+        izz="5.04590880065432E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_wrist_yaw_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/left_wrist_yaw_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="left_wrist_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="0.0575 0 -0.001"
+      rpy="0 0 0" />
+    <parent
+      link="left_wrist_pitch_link" />
+    <child
+      link="left_wrist_yaw_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.44"
+      upper="0.44"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_shoulder_pitch_link">
+    <inertial>
+      <origin
+        xyz="-0.00069707 -0.03688965 -0.01227664" 
+        rpy="0 0 0" />
+      <mass
+        value="0.5323" />
+      <inertia
+        ixx="0.000342480344495735"
+        ixy="-2.56831163727392E-08"
+        ixz="-1.13402514447074E-06"
+        iyy="0.000348656968923099"
+        iyz="-1.97851626968570E-05"
+        izz="0.000331192689181065" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/collision/right_shoulder_pitch_link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_shoulder_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_shoulder_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="0.0037548 -0.10854 0.26163"
+      rpy="-0.27925 0 0" />
+    <parent
+      link="torso_link" />
+    <child
+      link="right_shoulder_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_shoulder_roll_link">
+    <inertial>
+      <origin
+        xyz="-0.00323926 -0.00686758 -0.01965515" 
+        rpy="0 0 0" />
+      <mass
+        value="0.1828" />
+      <inertia
+        ixx="0.000191412879474143"
+        ixy="4.06487854541431E-06"
+        ixz="1.19448193369323E-05"
+        iyy="0.000279390822677912"
+        iyz="-2.22918529879459E-05"
+        izz="0.000218296298542506" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_shoulder_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_shoulder_roll_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_shoulder_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0 -0.03845 -0.013831"
+      rpy="0.27925 0 0" />
+    <parent
+      link="right_shoulder_pitch_link" />
+    <child
+      link="right_shoulder_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5708"
+      upper="0.00001"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_shoulder_yaw_link">
+    <inertial>
+      <origin
+        xyz="0.00661072 0.00003254 -0.07523086"  
+        rpy="0 0 0" />
+      <mass
+        value="0.9759" />
+      <inertia
+        ixx="0.00299173256160441"
+        ixy="1.58914998275873E-06"
+        ixz="0.000358591432894295"
+        iyy="0.00308387691899268"
+        iyz="-3.65316797813064E-06"
+        izz="0.000567720560393480" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_shoulder_yaw_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_shoulder_yaw_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_shoulder_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="0 -0.0090703 -0.055232"
+      rpy="0 0 0" />
+    <parent
+      link="right_shoulder_roll_link" />
+    <child
+      link="right_shoulder_yaw_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_elbow_link">
+    <inertial>
+      <origin 
+        xyz="0.06532523 0.01640403 -0.00839120" 
+        rpy="0 0 0" />
+      <mass
+        value="0.5165" />
+      <inertia
+        ixx="0.000282369741390714"
+        ixy="-0.000104639067114739"
+        ixz="2.70023295050959E-05"
+        iyy="0.000485819825613672"
+        iyz="8.77470934667060E-06"
+        izz="0.000499360430625774" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_elbow_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_elbow_link.STL" />
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin
+        xyz="0.11 0 -0.01"
+        rpy="0 1.5708 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.27"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_elbow_joint"
+    type="revolute">
+    <origin
+      xyz="0.015287 -0.0056152 -0.1281"
+      rpy="0 0 0" />
+    <parent
+      link="right_shoulder_yaw_link" />
+    <child
+      link="right_elbow_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.0472"
+      upper="2.0944"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_wrist_roll_link">
+    <inertial>
+      <origin
+        xyz="0.01759288 -0.00097906 0.00000720"   
+        rpy="0 0 0" />
+      <mass
+        value="0.0958" />
+      <inertia
+        ixx="6.20405323525282E-05"
+        ixy="3.06457805534962E-06"
+        ixz="-1.28640545324359E-09"
+        iyy="5.00794691812744E-05"
+        iyz="5.07800448943123E-09"
+        izz="7.85799984408735E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_wrist_roll_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_wrist_roll_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_wrist_roll_joint"
+    type="revolute">
+    <origin
+      xyz="0.10208 -0.0026608 -0.0092555"
+      rpy="0 0 0" />
+    <parent
+      link="right_elbow_link" />
+    <child
+      link="right_wrist_roll_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_wrist_pitch_link">
+    <inertial>
+      <origin
+        xyz="0.02873505 0.00007773 -0.00045152"  
+        rpy="0 0 0" />
+      <mass
+        value="0.7363" />
+      <inertia
+        ixx="0.000370568488183256"
+        ixy="1.35478761657052E-06"
+        ixz="8.06606238768961E-06"
+        iyy="0.00125028790315572"
+        iyz="-2.34859455161790E-08"
+        izz="0.00122207360937382" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_wrist_pitch_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_wrist_pitch_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_wrist_pitch_joint"
+    type="revolute">
+    <origin
+      xyz="0.040949 -0.0010221 0"
+      rpy="0 0 0" />
+    <parent
+      link="right_wrist_roll_link" />
+    <child
+      link="right_wrist_pitch_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-0.44"
+      upper="0.44"
+      effort="1000"
+      velocity="100" />
+  </joint>
+  <link
+    name="right_wrist_yaw_link">
+    <inertial>
+      <origin
+        xyz="0.02390958 -0.00004407 0.00056329"
+        rpy="0 0 0" />
+      <mass
+        value="0.0958" />
+      <inertia
+        ixx="6.51109124046462E-05"
+        ixy="-1.77908981617937E-09"
+        ixz="-1.96551104782961E-06"
+        iyy="8.04199992536036E-05"
+        iyz="-4.95192253119594E-10"
+        izz="5.04590880065432E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_wrist_yaw_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/home/harry/Desktop/PBHC_old/description/robots/viper/meshes/right_wrist_yaw_link.STL" />
+      </geometry>
+    </collision> -->
+  </link>
+  <joint
+    name="right_wrist_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="0.0575 0 -0.0016"
+      rpy="0 0 0" />
+    <parent
+      link="right_wrist_pitch_link" />
+    <child
+      link="right_wrist_yaw_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.44"
+      upper="0.44"
+      effort="1000"
+      velocity="100" />
+  </joint>
+</robot>

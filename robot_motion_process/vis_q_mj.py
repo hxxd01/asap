@@ -34,10 +34,9 @@ def add_visual_capsule(scene, point1, point2, radius, rgba):
     mujoco.mjv_initGeom(scene.geoms[scene.ngeom-1],
                         mujoco.mjtGeom.mjGEOM_CAPSULE, np.zeros(3),
                         np.zeros(3), np.zeros(9), rgba.astype(np.float32))
-    mujoco.mjv_makeConnector(scene.geoms[scene.ngeom-1],
+    mujoco.mjv_connector(scene.geoms[scene.ngeom-1],
                             mujoco.mjtGeom.mjGEOM_CAPSULE, radius,
-                            point1[0], point1[1], point1[2],
-                            point2[0], point2[1], point2[2])
+                            point1.astype(np.float64), point2.astype(np.float64))
 
 def key_call_back( keycode):
     global curr_start, num_motions, motion_id, motion_acc, time_step, dt, speed, paused, rewind, motion_data_keys, contact_mask, curr_time, resave
@@ -138,6 +137,12 @@ def main(cfg : DictConfig) -> None:
     print("Init Pose: ",(np.array(np.concatenate(
         [curr_motion['root_trans_offset'][0],curr_motion['root_rot'][0][[3, 0, 1, 2]], curr_motion['dof'][0]]
         ),dtype=np.float32)).__repr__())
+    
+    # 在启动viewer之前，设置PKL的第一帧姿态
+    mj_data.qpos[:3] = curr_motion['root_trans_offset'][0]
+    mj_data.qpos[3:7] = curr_motion['root_rot'][0][[3, 0, 1, 2]]  # xyzw 2 wxyz
+    mj_data.qpos[7:] = curr_motion['dof'][0]
+    mujoco.mj_forward(mj_model, mj_data)  # 更新模型状态
     
     # breakpoint()
     with mujoco.viewer.launch_passive(mj_model, mj_data, key_callback=key_call_back) as viewer:

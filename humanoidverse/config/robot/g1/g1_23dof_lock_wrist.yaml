@@ -360,4 +360,3 @@ robot:
 #         fps: 200 # 1/dt , dt = 0.005
 #         control_freq_inv: 4  # decimation
 #         substeps: 1
-

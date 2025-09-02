@@ -108,11 +108,15 @@ def pre_process_config(config) -> None:
             the_motion_data = motion_data[next(iter(motion_data))]
             # 支持float类型的fps，转换为int
             fps = the_motion_data['fps']
-            if isinstance(fps, float):
+            '''if isinstance(fps, float):
                 if fps.is_integer():
                     fps = int(fps)
                 else:
                     raise ValueError(f"FPS {fps} is not an integer value")
+            elif not isinstance(fps, int):
+                raise ValueError(f"FPS must be int or float, got {type(fps)}")'''
+            if isinstance(fps, float):
+                fps = int(round(fps))  # 四舍五入转换为整数
             elif not isinstance(fps, int):
                 raise ValueError(f"FPS must be int or float, got {type(fps)}")
             

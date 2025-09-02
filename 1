@@ -1,45 +1,80 @@
-python humanoidverse/train_agent.py \
-+simulator=isaacgym +exp=motion_tracking +terrain=terrain_locomotion_plane \
-project_name=MotionTracking num_envs=128 \
-+obs=motion_tracking/benchmark \
-+robot=g1/g1_23dof_lock_wrist \
-+domain_rand=dr_nil \
-+rewards=motion_tracking/main \
-experiment_name=benchmark \
-robot.motion.motion_file="/home/harry/Desktop/PBHC/example/motion_data/Side_kick.pkl" \
-seed=1 \
-
-+device=cuda:0
-
-export PYTHONPATH=/home/harry/Desktop/PBHC:$PYTHONPATH
-
 HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
 +simulator=isaacgym +exp=motion_tracking +terrain=terrain_locomotion_plane \
 project_name=MotionTracking num_envs=4096 \
 +obs=motion_tracking/main \
 +robot=g1/g1_23dof_lock_wrist \
 +domain_rand=main \
++checkpoint="/home/harry/Desktop/PBHC_old/logs/MotionTracking/20250821_180247-benchmark-motion_tracking-g1_23dof_lock_wrist/model_51000.pt"
 +rewards=motion_tracking/main \
-experiment_name=debug \
-robot.motion.motion_file="/home/harry/Desktop/PBHC/example/motion_data/Bruce_Lee_pose.pkl" \
-seed=1 \
+experiment_name=benchmark \
+robot.motion.motion_file="/home/harry/Desktop/PBHC_old/data_csv_contact_mask/dance1_subject2_40s_cont_mask.pkl" \
+seed=1
+
+
+# custom_rl_env.py 第108行
+contact_forces = ContactSensorCfg(
+    prim_path="{ENV_REGEX_NS}/Robot/.*",
+    history_length=3,  # ← 接触力历史：3步
+    track_air_time=True
+)
+
+# custom_rl_env.py 第157行
+actions = ObsTerm(func=mdp.last_action)  # ← 上一步动作：1步
+
+
+
+
 +device=cuda:0
 
+export PYTHONPATH=/home/harry/Desktop/asap-pbhc:$PYTHONPATH
 
 
+pretrain
 
-python humanoidverse/train_agent.py \
+
+HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
 +simulator=isaacgym +exp=motion_tracking +terrain=terrain_locomotion_plane \
 project_name=MotionTracking num_envs=4096 \
 +obs=motion_tracking/main \
 +robot=g1/g1_23dof_lock_wrist  \
 +domain_rand=main \
 +rewards=motion_tracking/main \
-+checkpoint=/home/harry/Desktop/PBHC/logs/MotionTracking/20250717_153259-debug-motion_tracking-g1_23dof_lock_wrist/model_20000.pt \
-experiment_name=debug \
-robot.motion.motion_file="/home/harry/Desktop/PBHC/example/motion_data/Roundhouse_kick.pkl" \
+experiment_name=pbhc_pretrain \
+robot.motion.motion_file="example/motion_data/Roundhouse_kick.pkl" \
 seed=1 \
 +device=cuda:0
+
+
+
+cd asap_mujoco_sim
+
+python mujoco_track_with_processing.py
+
+
+python read_sigma.py --log_dir /home/harry/Desktop/asap-pbhc/logs/MotionTracking/round_sick \
+  --yaml humanoidverse/config/rewards/motion_tracking/final_training.yaml \
+  --multiplier 2 --no-backup
+
+
+
+HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
++simulator=isaacgym +exp=motion_tracking +terrain=terrain_locomotion_plane \
+project_name=MotionTracking num_envs=4096 \
++checkpoint="/home/harry/Desktop/PBHC/logs/MotionTracking/20250718_161135-debug-motion_tracking-g1_23dof_lock_wrist/model_20000.pt" \
++obs=motion_tracking/main \
++robot=g1/g1_23dof_lock_wrist \
++domain_rand=main \
+algo.config.save_interval=200 \
++rewards=motion_tracking/final_training \
+experiment_name=debug \
+robot.motion.motion_file="/home/harry/Desktop/PBHC/example/motion_data/Horse-stance_pose.pkl" \
+seed=1 \
++device=cuda:0
+
+
+HYDRA_FULL_ERROR=1 python /home/harry/Desktop/PBHC_old/motion_source/count_pkl_contact_mask.py input_folder=/home/harry/Desktop/PBHC_old/data_csv
+
+
 
 
 
@@ -50,20 +85,27 @@ tensorboard --logdir /home/harry/Desktop/PBHC/logs/MotionTracking/20250718_16113
 
 /home/harry/Desktop/ASAP1/logs/MotionTracking/20250715_173942-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_20000.pt
 
-HYDRA_FULL_ERROR=1 python humanoidverse/eval_agent.py +device=cuda:0  +headness=True +env.config.enforce_randomize_motion_start_eval=False +checkpoint=/home/harry/Desktop/PBHC/logs/MotionTracking/20250722_153751-MotionTracking_CR7-motion_tracking-g1_23dof_lock_wrist/model_46100.pt
+HYDRA_FULL_ERROR=1 python humanoidverse/eval_agent.py +device=cuda:0  +headness=True +env.config.enforce_randomize_motion_start_eval=False +checkpoint=/home/harry/Desktop/PBHC_old/logs/MotionTracking/20250821_180247-benchmark-motion_tracking-g1_23dof_lock_wrist/model_51000.pt
 
 
-
+delta_model
 侧踢：
 /home/harry/Desktop/ASAP1/logs/MotionTracking/20250715_173942-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_20000.pt
 侧踢只有脚踝：
 /home/harry/Desktop/ASAP1/logs/MotionTracking/20250717_170418-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_22000.pt
+
+
+
+侧踢腿：
+/home/harry/Desktop/PBHC1/logs/MotionTracking/20250630_181116-debug-motion_tracking-g1_23dof_lock_wrist/model_46000.pt
 旋转踢：
 /home/harry/Desktop/PBHC/logs/MotionTracking/20250718_161135-debug-motion_tracking-g1_23dof_lock_wrist/model_30000.pt
 马步：
 /home/harry/Desktop/PBHC/logs/MotionTracking/20250718_214758-debug-motion_tracking-g1_23dof_lock_wrist/model_175000.pt
+李小龙：
+/home/harry/Desktop/PBHC/logs/MotionTracking/20250722_124526-MotionTracking_CR7-motion_tracking-g1_23dof_lock_wrist/model_50300.pt
 
-
+/home/harry/Desktop/asap/logs/MotionTracking/20250805_152440-MotionTracking_CR7-motion_tracking-g1_23dof_lock_wrist/model_1700.pt
 
 
 HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
@@ -74,16 +116,16 @@ HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
 +robot=g1/g1_23dof_lock_wrist \
 +terrain=terrain_locomotion_plane \
 +obs=motion_tracking/final_training \
-+algo.config.policy_checkpoint="/home/harry/Desktop/asap/logs/MotionTracking/20250722_143719-MotionTracking_CR7-motion_tracking-g1_23dof_lock_wrist/model_1400.pt" \
-+checkpoint="/home/harry/Desktop/PBHC1/logs/MotionTracking/20250630_181116-debug-motion_tracking-g1_23dof_lock_wrist/model_46000.pt" \
++algo.config.policy_checkpoint="/home/harry/Desktop/asap-pbhc/logs/MotionTracking/20250901_204337-MotionTracking_CR7-motion_tracking-g1_23dof_lock_wrist/model_36000.pt" \
++checkpoint="/home/harry/Desktop/asap-pbhc/logs/MotionTracking/round_sick/model_30000.pt" \
 num_envs=4096 \
 project_name=MotionTracking \
-experiment_name=MotionTracking_CR7 \
-robot.motion.motion_file=/home/harry/Desktop/PBHC1/humanoidverse/data/motions/Side_kick.pkl \
+experiment_name=final_training \
+robot.motion.motion_file=example/motion_data/Roundhouse_kick.pkl \
 rewards.reward_penalty_curriculum=True \
 rewards.reward_penalty_degree=0.00001 \
-algo._target_=humanoidverse.agents.delta_a.train_agent_d_ankle.PPODeltaDAnkle \
 algo=mh_ppo \
+algo._target_=humanoidverse.agents.delta_a.train_agent_d_ankle.PPODeltaDAnkle \
 algo.config.save_interval=100 \
 env.config.resample_motion_when_training=False \
 env.config.termination.terminate_when_motion_far=True \
@@ -106,22 +148,48 @@ HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
 +exp=motion_tracking \
 +domain_rand=NO_domain_rand \
 +rewards=motion_tracking/delta_action_rewards  \
-+algo.config.policy_checkpoint="/home/harry/Desktop/ASAP1/logs/MotionTracking/20250317_215927-MotionTracking_CR7-motion_tracking-g1_29dof_anneal_23dof/model_19900.pt" \
 +robot=g1/g1_23dof_lock_wrist  \
 +terrain=terrain_locomotion_plane \
 +obs=motion_tracking/delta_action_obs \
-++use_wandb=False  \
 ++rewards.reward_scales.termination=-100 \
-num_envs=4096 \
+num_envs=2048 \
 project_name=MotionTracking \
 experiment_name=MotionTracking_CR7 \
-robot.motion.motion_file="/home/harry/Desktop/ASAP1/asap_mujoco_sim/round/processed_pkl_files/0721_102019_processed_min75.pkl" \
+robot.motion.motion_file="/home/harry/Desktop/asap-pbhc/asap_mujoco_sim/processed_pkl_files/0901_161752_mujoco_motion_raw_processed_min75.pkl" \
 robot.motion.motion_lib_type=origin \
 rewards.reward_penalty_curriculum=False \
 rewards.reward_penalty_degree=0.00001 \
 algo._target_=humanoidverse.agents.delta_a.train_delta_a_ankle_only.PPODeltaAAnkleOnly \
 algo.config.num_steps_per_env=50 \
 algo=ppo_delta_ankle \
+env.config.resample_motion_when_training=True \
+env.config.termination.terminate_when_motion_far=True \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
+env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
+env.config.termination.terminate_by_gravity=True \
+robot.asset.self_collisions=0
+
+
+
+HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
++simulator=isaacgym \
++exp=motion_tracking \
++domain_rand=NO_domain_rand \
++rewards=motion_tracking/delta_action_rewards  \
++robot=g1/g1_23dof_lock_wrist  \
++terrain=terrain_locomotion_plane \
++obs=motion_tracking/delta_action_obs \
+++rewards.reward_scales.termination=-100 \
+algo=mh_ppo \
+robot.motion.motion_file="/home/harry/Desktop/asap-pbhc/asap_mujoco_sim/processed_pkl_files/0901_161752_mujoco_motion_raw_processed_min75.pkl" \
+num_envs=2048 \
+project_name=MotionTracking \
+experiment_name=delta_action_training \
+robot.motion.motion_lib_type=origin \
+rewards.reward_penalty_curriculum=False \
+rewards.reward_penalty_degree=0.00001 \
+algo.config.num_steps_per_env=50 \
 env.config.resample_motion_when_training=True \
 env.config.termination.terminate_when_motion_far=True \
 env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \

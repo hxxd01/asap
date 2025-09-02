@@ -33,89 +33,104 @@ from humanoidverse.agents.base_algo.base_algo import BaseAlgo
 from hydra.utils import instantiate
 
 
-# 训练delta action模型，policy_checkpoint是预训练模型。
-class PPODeltaA(MHPPO):
+# 训练delta action模型，只调脚踝关节版本 - 基于原始版本简单修改
+class PPODeltaAAnkleOnly(MHPPO):
     def __init__(self,
                  env: BaseTask,
                  config,
                  log_dir=None,
                  device='cpu'):
+
+        # 脚踝关节索引
+        self.ankle_indices = [4, 5, 10, 11]  # left_ankle_pitch, left_ankle_roll, right_ankle_pitch, right_ankle_roll
+
+        # 修改网络输出维度为4维
+        original_actions_dim = env.config.robot.actions_dim
+        env.config.robot.actions_dim = 4  # 临时设为4维
+
         super().__init__(env, config, log_dir, device)
+
+        # 恢复原始维度
+        env.config.robot.actions_dim = original_actions_dim
+
         # 统计数据缓冲区
         self._pos_stats_buffer = []
-        self._pos_min_buffer = []  # 记录最小值
-        self._pos_max_buffer = []  # 记录最大值
-        self._lin_vel_stats_buffer = []  # 新增：线性速度统计
-        self._lin_vel_min_buffer = []  # 新增：线性速度最小值
-        self._lin_vel_max_buffer = []  # 新增：线性速度最大值
-        self.stats_collection_interval = 10000  # 默认每10000步打印一次统计数据
+        self._pos_min_buffer = []
+        self._pos_max_buffer = []
+        self._lin_vel_stats_buffer = []
+        self._lin_vel_min_buffer = []
+        self._lin_vel_max_buffer = []
+        self.stats_collection_interval = 10000
         self.stats_collection_counter = 0
 
+        # 残差动作统计（经过scale后的）- 存储每步的正负平均值
+        self.ankle_delta_stats = {
+            'left_pitch_positive_avgs': [],  # 存储每步正值的平均值
+            'left_pitch_negative_avgs': [],  # 存储每步负值的平均值
+            'left_roll_positive_avgs': [],
+            'left_roll_negative_avgs': [],
+            'right_pitch_positive_avgs': [],
+            'right_pitch_negative_avgs': [],
+            'right_roll_positive_avgs': [],
+            'right_roll_negative_avgs': []
+        }
 
+        '''if config.policy_checkpoint is not None:
+            has_config = True
+            checkpoint = Path(config.policy_checkpoint)
 
-                # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
-                # if not hasattr(env, 'loaded_extra_policy'):
-                #     setattr(env, 'loaded_extra_policy', self.loaded_policy)
-                # if not hasattr(env.loaded_extra_policy, 'eval_policy'):
-                #     setattr(env.loaded_extra_policy, 'eval_policy', self.loaded_policy._get_inference_policy())
+            config_path = checkpoint.parent / "config.yaml"
+            if not config_path.exists():
+                config_path = checkpoint.parent.parent / "config.yaml"
+                if not config_path.exists():
+                    has_config = False
+                    logger.error(f"Could not find config path: {config_path}")
 
-                # ----------------- UNCOMMENT THIS FOR ANALYTIC SEARCH FOR OPTIMAL ACTION BASED ON DELTA_A -----------------
+            if has_config:
+                logger.info(f"Loading training config file from {config_path}")
+                with open(config_path) as file:
+                    policy_config = OmegaConf.load(file)
 
-    # def _actor_act_step(self, obs_dict):
-    #     actions = self.actor.act(obs_dict["actor_obs"])
-    #     return self.actor.act_inference(obs_dict["actor_obs"])
+                if policy_config.eval_overrides is not None:
+                    policy_config = OmegaConf.merge(
+                        policy_config, policy_config.eval_overrides
+                    )
 
-    '''def _actor_rollout_step(self, obs_dict, policy_state_dict):
-        # 获取pkl_actions
-        pkl_actions=self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
-        obs_dict['actor_obs'] = torch.cat([
-            obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
-            pkl_actions  # 这里到底是pkl_actions还是ref_actions?
-        ], dim=1)
-        # 策略网络输出delta_actions
-        delta_actions = self._actor_act_step(obs_dict)
+                policy_config.algo.config.policy_checkpoint = str(checkpoint)
+                logger.info(f"Using checkpoint: {checkpoint}")
 
-        actions = pkl_actions + delta_actions
-        policy_state_dict["actions"] = actions
-        action_mean = self.actor.action_mean.detach()
-        action_sigma = self.actor.action_std.detach()
-        actions_log_prob = self.actor.get_actions_log_prob(actions).detach().unsqueeze(1)
-        policy_state_dict["action_mean"] = action_mean
-        policy_state_dict["action_sigma"] = action_sigma
-        policy_state_dict["actions_log_prob"] = actions_log_prob
+                pre_process_config(policy_config)
 
-        assert len(actions.shape) == 2
-        assert len(actions_log_prob.shape) == 2
-        assert len(action_mean.shape) == 2
-        assert len(action_sigma.shape) == 2
+                # 直接使用PPO类创建loaded_policy
+                self.loaded_policy = PPO(env=env, config=policy_config.algo.config, device=device, log_dir=None)
+                self.loaded_policy.algo_obs_dim_dict = policy_config.env.config.robot.algo_obs_dim_dict
+                self.loaded_policy.setup()
+                self.loaded_policy.load(str(checkpoint))  
+                self.loaded_policy._eval_mode()
+                self.loaded_policy.eval_policy = self.loaded_policy._get_inference_policy()
 
-        return policy_state_dict'''
+                # 设置环境的loaded_policy
+                if isinstance(self.env, LeggedRobotMotionTracking):
+                    self.env.loaded_policy = self.loaded_policy
 
-    @torch.no_grad()
-    def evaluate_policy(self):
-        self._create_eval_callbacks()
-        self._pre_evaluate_policy()
-        actor_state = self._create_actor_state()
-        step = 0
-        self.eval_policy = self._get_inference_policy()
-        obs_dict = self.env.reset_all()
-        init_actions = torch.zeros(self.env.num_envs, self.num_act, device=self.device)
-        actor_state.update({"obs": obs_dict, "actions": init_actions})
-        actor_state = self._pre_eval_env_step(actor_state)
-        while True:
-            actor_state["step"] = step
-            actor_state = self._pre_eval_env_step(actor_state)
-            actor_state = self.env_step(actor_state)
-            actor_state = self._post_eval_env_step(actor_state)
-            step += 1
-        self._post_evaluate_policy()
+                for name, param in self.loaded_policy.actor.actor_module.module.named_parameters():
+                    param.requires_grad = False
+
+                logger.info(f"Ankle-only Delta Action: Network outputs 4D ankle delta actions")
+                logger.info(f"Ankle joints: {self.ankle_indices}")'''
+
+    def _expand_ankle_to_full(self, ankle_actions_4d):
+        """将4维脚踝动作扩展为23维全身动作"""
+        batch_size = ankle_actions_4d.shape[0]
+        full_actions = torch.zeros(batch_size, 23, device=self.device)
+        full_actions[:, self.ankle_indices] = ankle_actions_4d
+        return full_actions
 
     def _rollout_step(self, obs_dict):
         with torch.inference_mode():
             for i in range(self.num_steps_per_env):
-                # 使用loaded policy生成动作作为ref_actions
+                # 使用motion库中的pkl动作作为参考动作
                 pkl_actions = self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
-
 
                 last_actor_slice = obs_dict['actor_obs'][:, -self.env.dim_actions:]
                 if not torch.allclose(last_actor_slice, torch.zeros_like(last_actor_slice)):
@@ -125,9 +140,10 @@ class PPODeltaA(MHPPO):
                 last_critic_slice = obs_dict['critic_obs'][:, -self.env.dim_actions:]
                 if not torch.allclose(last_critic_slice, torch.zeros_like(last_critic_slice)):
                     print("Warning: 观测错误")
+
                 obs_dict['actor_obs'] = torch.cat([
                     obs_dict['actor_obs'][:, :-self.env.dim_actions],  # 除了ref_actions之外的所有观测
-                    pkl_actions  # 这里到底是pkl_actions还是ref_actions?
+                    pkl_actions  # 这里使用pkl_actions
                 ], dim=1)
 
                 obs_dict['critic_obs'] = torch.cat([
@@ -137,10 +153,39 @@ class PPODeltaA(MHPPO):
 
                 policy_state_dict = {}
                 policy_state_dict = self._actor_rollout_step(obs_dict, policy_state_dict)
-                delta_actions = policy_state_dict["actions"]
+
+                # 关键修改：网络输出4维，扩展为23维
+                ankle_delta_4d = policy_state_dict["actions"]  # 4维输出
+                delta_actions = self._expand_ankle_to_full(ankle_delta_4d)  # 扩展为23维
+
+                # 收集残差动作统计（经过action_scale缩放后的真实调整量）
+                action_scale = self.env.config.robot.control.action_scale
+                scaled_ankle_delta = ankle_delta_4d * action_scale  # 4维脚踝残差的真实调整量
+
+                # 计算每步的正负平均值 (2048个环境的数据)
+                scaled_ankle_numpy = scaled_ankle_delta.cpu().numpy()  # (2048, 4)
+
+                for joint_idx, joint_name in enumerate(['left_pitch', 'left_roll', 'right_pitch', 'right_roll']):
+                    joint_values = scaled_ankle_numpy[:, joint_idx]  # 当前关节的2048个值
+
+                    # 分离正值和负值
+                    positive_values = joint_values[joint_values > 0]
+                    negative_values = joint_values[joint_values < 0]
+
+                    # 计算正值平均值（如果有正值的话）
+                    if len(positive_values) > 0:
+                        pos_avg = positive_values.mean()
+                        self.ankle_delta_stats[f'{joint_name}_positive_avgs'].append(pos_avg)
+
+                    # 计算负值平均值（如果有负值的话）
+                    if len(negative_values) > 0:
+                        neg_avg = negative_values.mean()
+                        self.ankle_delta_stats[f'{joint_name}_negative_avgs'].append(neg_avg)
+
                 values = self._critic_eval_step(obs_dict).detach()
                 policy_state_dict["values"] = values
-                # final_actions = delta_actions + pkl_actions  # 直接计算最终动作
+
+                # 原始逻辑：delta + pkl
                 final_actions = delta_actions + pkl_actions
 
                 ## Append states to storage
@@ -150,30 +195,8 @@ class PPODeltaA(MHPPO):
                 for obs_ in policy_state_dict.keys():
                     self.storage.update_key(obs_, policy_state_dict[obs_])
 
-                    # delta action
-
-                '''if i % 10 == 0:
-                    base_ang_vel = obs_dict['actor_obs'][:, 0:3]
-                    projected_gravity = obs_dict['actor_obs'][:, 3:6]
-                    dof_pos = obs_dict['actor_obs'][:, 6:29]
-                    dof_vel = obs_dict['actor_obs'][:, 29:52]
-                    actions = obs_dict['actor_obs'][:, 52:75]
-                    ref_motion_phase = obs_dict['actor_obs'][:, 75:76]
-                    history_actor =obs_dict['actor_obs'][:, 76:]
-
-                    print(
-                        f"[Step {i}] base_ang_vel mean: {base_ang_vel.mean().item():.4f}, std: {base_ang_vel.std().item():.4f}, min: {base_ang_vel.min().item():.4f}, max: {base_ang_vel.max().item():.4f}")
-                    print(
-                        f"[Step {i}] projected_gravity mean: {projected_gravity.mean().item():.4f}, std: {projected_gravity.std().item():.4f}, min: {projected_gravity.min().item():.4f}, max: {projected_gravity.max().item():.4f}")
-                    print(
-                        f"[Step {i}] pkl_action mean: {pkl_actions.mean().item():.4f}, std: {pkl_actions.std().item():.4f}, min: {pkl_actions.min().item():.4f}, max: {pkl_actions.max().item():.4f}")
-                    print(
-                        f"[Step {i}] final_action mean: {final_actions.mean().item():.4f}, std: {final_actions.std().item():.4f}, min: {final_actions.min().item():.4f}, max: {final_actions.max().item():.4f}")
-                    print(
-                        f"actions mean: {actions.mean().item():.4f}, std: {actions.std().item():.4f}, min: {actions.min().item():.4f}, max: {actions.max().item():.4f}")'''
-
                 actor_state = {
-                    "actions": final_actions,  # 使用最终动作
+                    "actions": final_actions,
                     "delta_actions": delta_actions,
                 }
 
@@ -184,7 +207,6 @@ class PPODeltaA(MHPPO):
                 rewards, dones = rewards.to(self.device), dones.to(self.device)
 
                 self.episode_env_tensors.add(infos["to_log"])
-                # rewards_stored = rewards.clone().unsqueeze(1)
                 rewards_stored = rewards.clone().reshape(self.env.num_envs, self.env.num_rew_fn)
                 if 'time_outs' in infos:
                     rewards_stored += self.gamma * policy_state_dict['values'] * infos['time_outs'].unsqueeze(1).to(self.device)
@@ -195,24 +217,11 @@ class PPODeltaA(MHPPO):
 
                 self._process_env_step(rewards, dones, infos)
 
-                '''if self.log_dir is not None:
-                    # Book keeping
-                    if 'episode' in infos:
-                        self.ep_infos.append(infos['episode'])
-                    self.cur_reward_sum += rewards
-                    self.cur_episode_length += 1
-                    new_ids = (dones > 0).nonzero(as_tuple=False)
-                    self.rewbuffer.extend(self.cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
-                    self.lenbuffer.extend(self.cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
-                    self.cur_reward_sum[new_ids] = 0
-                    self.cur_episode_length[new_ids] = 0'''
                 if self.log_dir is not None:
                     # Book keeping
                     if 'episode' in infos:
                         self.ep_infos.append(infos['episode'])
-                    # self.cur_reward_sum += rewards.sum(dim=1)  # Sum rewards across reward functions
                     self.cur_reward_sum += rewards.view(self.env.num_envs, self.env.num_rew_fn).sum(dim=-1)
-
                     self.cur_episode_length += 1
                     new_ids = (dones > 0).nonzero(as_tuple=False)
                     self.rewbuffer.extend(self.cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
@@ -225,7 +234,6 @@ class PPODeltaA(MHPPO):
             self.start_time = self.stop_time
 
             # prepare data for training
-
             returns, advantages = self._compute_returns(
                 last_obs_dict=obs_dict,
                 policy_state_dict=dict(values=self.storage.query_key('values'),
@@ -238,15 +246,99 @@ class PPODeltaA(MHPPO):
         return obs_dict
 
     def _pre_eval_env_step(self, actor_state: dict):
-        actions = self.eval_policy(actor_state["obs"]['actor_obs'])
+        # 评估时的处理
+        ankle_actions_4d = self.eval_policy(actor_state["obs"]['actor_obs'])  # 4维输出
         actions_closed_loop = self.loaded_policy.eval_policy(actor_state['obs']['closed_loop_actor_obs']).detach()
 
-        actor_state.update({"actions": actions, "actions_closed_loop": actions_closed_loop})
-        # actor_state.update({"actions": actions, "actions_closed_loop": actions_closed_loop, "current_closed_loop_actor_obs": actor_state['obs']['closed_loop_actor_obs']})
-        # print("updated closed loop actor obs: ", actor_state['current_closed_loop_actor_obs'])
+        # 扩展为23维并与pkl相加
+        delta_actions = self._expand_ankle_to_full(ankle_actions_4d)
+        pkl_actions = self.env._motion_lib.get_motion_actions(self.env.motion_ids, self.env._motion_times)
+        final_actions = delta_actions + pkl_actions
+
+        actor_state.update({"actions": final_actions, "actions_closed_loop": actions_closed_loop})
+
         for c in self.eval_callbacks:
             actor_state = c.on_pre_eval_env_step(actor_state)
         return actor_state
 
+    def generate_ankle_delta_log(self, pad=40, iteration=None):
+        """生成脚踝残差动作统计日志并记录到TensorBoard - 基于正负平均值统计"""
+        import numpy as np
 
+        if not any(self.ankle_delta_stats.values()):
+            return ""
 
+        ankle_log_string = ""
+        joint_names = ['Left Pitch', 'Left Roll', 'Right Pitch', 'Right Roll']
+        stat_keys = ['left_pitch', 'left_roll', 'right_pitch', 'right_roll']
+
+        for name, key in zip(joint_names, stat_keys):
+            # 获取正值平均值数组和负值平均值数组
+            pos_avgs = self.ankle_delta_stats[f'{key}_positive_avgs']
+            neg_avgs = self.ankle_delta_stats[f'{key}_negative_avgs']
+
+            # 处理正值平均值统计
+            if pos_avgs:
+                pos_data = np.array(pos_avgs)
+                pos_max = pos_data.max()
+                pos_min = pos_data.min()
+                pos_mean = pos_data.mean()
+
+                ankle_log_string += f"{f'{name} - Positive Averages Max:':>{pad}} {pos_max:>10.4f}\n"
+                ankle_log_string += f"{f'{name} - Positive Averages Min:':>{pad}} {pos_min:>10.4f}\n"
+                ankle_log_string += f"{f'{name} - Positive Averages Mean:':>{pad}} {pos_mean:>10.4f}\n"
+
+                # 记录到TensorBoard
+                if iteration is not None and hasattr(self, 'writer'):
+                    self.writer.add_scalar(f'AnkleDelta/{name}_Positive_Max', pos_max, iteration)
+                    self.writer.add_scalar(f'AnkleDelta/{name}_Positive_Min', pos_min, iteration)
+                    self.writer.add_scalar(f'AnkleDelta/{name}_Positive_Mean', pos_mean, iteration)
+                    # 记录正值平均值分布直方图
+                    self.writer.add_histogram(f'AnkleDelta/{name}_Positive_Distribution', pos_data, iteration)
+
+            # 处理负值平均值统计
+            if neg_avgs:
+                neg_data = np.array(neg_avgs)
+                neg_max = neg_data.max()  # 负值中的最大值（最接近0的）
+                neg_min = neg_data.min()  # 负值中的最小值（最负的）
+                neg_mean = neg_data.mean()
+
+                ankle_log_string += f"{f'{name} - Negative Averages Max:':>{pad}} {neg_max:>10.4f}\n"
+                ankle_log_string += f"{f'{name} - Negative Averages Min:':>{pad}} {neg_min:>10.4f}\n"
+                ankle_log_string += f"{f'{name} - Negative Averages Mean:':>{pad}} {neg_mean:>10.4f}\n"
+
+                # 记录到TensorBoard
+                if iteration is not None and hasattr(self, 'writer'):
+                    self.writer.add_scalar(f'AnkleDelta/{name}_Negative_Max', neg_max, iteration)
+                    self.writer.add_scalar(f'AnkleDelta/{name}_Negative_Min', neg_min, iteration)
+                    self.writer.add_scalar(f'AnkleDelta/{name}_Negative_Mean', neg_mean, iteration)
+                    # 记录负值平均值分布直方图
+                    self.writer.add_histogram(f'AnkleDelta/{name}_Negative_Distribution', neg_data, iteration)
+
+            # 添加分隔线
+            ankle_log_string += "\n"
+
+        # 清空统计数据，为下次收集做准备
+        for key in self.ankle_delta_stats:
+            self.ankle_delta_stats[key].clear()
+
+        return ankle_log_string
+
+    def _post_epoch_logging(self, log_dict, width=80, pad=40):
+        """重写日志方法，添加残差动作统计"""
+        # 调用父类的日志方法
+        super()._post_epoch_logging(log_dict, width, pad)
+
+        # 只在指定间隔打印
+        if log_dict['it'] % self.logging_interval != 0:
+            return
+
+        # 生成残差动作日志，传递iteration用于TensorBoard记录
+        ankle_delta_log = self.generate_ankle_delta_log(pad, iteration=log_dict['it'])
+
+        if ankle_delta_log:
+            print("\n" + "=" * width)
+            print(" Ankle Delta Action Statistics (rad) ".center(width, '='))
+            print("=" * width)
+            print(ankle_delta_log, end="")
+            print("=" * width + "\n")

@@ -243,7 +243,7 @@ class LeggedRobotBase(BaseTask):
             mean_per_dim = arr.mean(axis=0)  # shape: (num_actions_per_env,)
             self.delta_action_stat_counter += 1
             # 在动作维度上取最大
-            max_mean = mean_per_dim.max()
+            max_mean = mean_per_dim.min()
             if self.delta_action_stat_counter % self.delta_action_stat_interval == 0:
                 # shape: (window, num_actions_per_env)
                 arr = np.stack(self.delta_action_history, axis=0)

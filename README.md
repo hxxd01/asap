@@ -1,143 +1,106 @@
+# MotionTracking 训练与微调指南
 
-<br>
-<p align="center">
-<h1 align="center"><strong>KungfuBot: Physics-Based Humanoid Whole-Body Control for Learning Highly-Dynamic Skills</strong></h1>
-  <p align="center">
-    <a href="https://shi-soul.github.io/" target="_blank">Weiji Xie</a><sup>* 1,2</sup>,
-    <a href="https://scholar.google.com/citations?hl=zh-CN&user=mJ7tn3MAAAAJ" target="_blank">Jinrui Han</a><sup>* 1,2</sup>,
-    <a href="#" target="_blank">Jiakun Zheng</a><sup>* 1,3</sup>,
-    <a href="https://scholar.google.com/citations?user=XhAo4J0AAAAJ&hl=zh-CN" target="_blank">Huanyu Li</a><sup>1,4</sup>,
-    <a href="https://xinzheliu.github.io/" target="_blank">Xinzhe Liu</a><sup>1,5</sup>,
-    <a href="https://scholar.google.com/citations?user=aVte5j4AAAAJ" target="_blank">Jiyuan Shi</a><sup>1</sup>,
-    <a href="https://wnzhang.net" target="_blank">Weinan Zhang</a><sup>2</sup>,
-    <a href="https://baichenjia.github.io/" target="_blank">Chenjia Bai</a><sup>&dagger;1</sup>,
-    <a href="https://scholar.google.com.hk/citations?user=ahUibskAAAAJ" target="_blank">Xuelong Li</a><sup>1</sup>
-    <br>
-    * Equal Contribution  &dagger; Corresponding Author
-    <br>
-    <sup>1</sup>Institute of Artificial Intelligence (TeleAI), China Telecom  
-    <sup>2</sup>Shanghai Jiao Tong University  
-    <sup>3</sup>East China University of Science and Technology  
-    <sup>4</sup>Harbin Institute of Technology  
-    <sup>5</sup>ShanghaiTech University
-  </p>
-</p>
+以下命令均在仓库根目录 `/home/harry/Desktop/asap-pbhc` 执行。
 
-<div id="top" align="center">
+## 1. 预训练（23维整体动作策略）
 
-[![arXiv](https://img.shields.io/badge/arXiv-2506.12851-orange)](https://arxiv.org/abs/2506.12851)
-[![](https://img.shields.io/badge/Project-%F0%9F%9A%80-pink)](https://kungfu-bot.github.io/)
-
-</div>
-
-## Demo
-
-[![demo](demo.jpg "demo")]()
-
-
-## News
-- \[2025-06\] We release the code and paper for PBHC.
-
-## Contents
-
-- [Demo](#demo)
-- [News](#news)
-- [Contents](#contents)
-- [About](#about)
-- [Usage](#usage)
-- [Folder Structure](#folder-structure)
-- [Citation](#citation)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
-- [Contact](#contact)
-
-## About
-
-
-
-[![overview](overview.jpg "overview")]()
-
-
-This is the official implementation of the paper [KungfuBot: Physics-Based Humanoid Whole-Body Control for Learning Highly-Dynamic Skills](https://kungfu-bot.github.io/).
-
-
-Our paper introduces a physics-based control framework that enables humanoid robots to learn and reproduce challenging motions through multi-stage motion processing and adaptive policy training.
-
-This repository includes:
-- Motion processing pipeline
-  - Collect human motion from various sources (video, LAFAN, AMASS, etc.) to a unified SMPL format (`motion_source/`)
-  - Filter, correct and retarget human motion to the robot (`smpl_retarget/`)
-  - Visualize and analyze the processed motions (`smpl_vis/`, `robot_motion_process/`)
-- RL-based motion imitation framework (`humanoidverse/`)
-  - Train the policy in IsaacGym
-  - Deploy trained policies in MuJoCo for sim2sim verification. The framework is designed for easy extension--custom policies and real-world deployment modules can be plugged in with minimal effort
-- Example data (`example/`)
-  - Sample motion data in our experiments (`example/motion_data/`, you can visualize the motion data with tools in `robot_motion_process/`)
-  - A pretrained policy checkpoint (`example/pretrained_hors_stance_pose/`)
-
-
-
-## Usage
-
-- Refer to `INSTALL.md` for environment setup and installation instructions.
-
-- Each module folder (e.g., `humanoidverse`, `smpl_retarget`) contains a dedicated `README.md` explaining its purpose and usage.
-
-- How to let your robot perform a new motion?
-  - Collect the motion data from the source and process the motion data to the SMPL format (`motion_source/`).
-  - Retarget the motion data to the robot (`smpl_retarget/`, choose `Mink` or `PHC` pipeline as you like).
-  - Visualize the processed motion to check whether the motion quality is satisfiable (`smpl_vis/`, `robot_motion_process/`).
-  - Train a policy for the processed motion in IsaacGym (`humanoidverse/`).
-  - Deploy the policy in MuJoCo or real-world robot (`humanoidverse/`).
-
-## Folder Structure
-
-- `description`: provide description file for SMPL and G1 robot.
-- `motion_source`: docs for getting SMPL format data.
-- `smpl_retarget`: tools for SMPL to G1 robot retargeting.
-- `smpl_vis`: tools for visualizing SMPL format data.
-- `robot_motion_process`: tools for processing robot format motion. Including visualization, interpolation, and trajectory analysis.
-- `humanoidverse`: training RL policy
-- `example`: example motion and ckpt for using PBHC
-
-
-## Citation
-
-If you find our work helpful, please cite:
-
-```bibtex
-@article{xie2025kungfubot,
-  title={KungfuBot: Physics-Based Humanoid Whole-Body Control for Learning Highly-Dynamic Skills},
-  author={Xie, Weiji and Han, Jinrui and Zheng, Jiakun and Li, Huanyu and Liu, Xinzhe and Shi, Jiyuan and Zhang, Weinan and Bai, Chenjia and Li, Xuelong},
-  journal={arXiv preprint arXiv:2506.12851},
-  year={2025}
-}
+```bash
+HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
++simulator=isaacgym +exp=motion_tracking +terrain=terrain_locomotion_plane \
+project_name=MotionTracking num_envs=4096 \
++obs=motion_tracking/main \
++robot=g1/g1_23dof_lock_wrist \
++domain_rand=main \
++rewards=motion_tracking/main \
+experiment_name=pbhc_pretrain \
+robot.motion.motion_file="example/motion_data/Roundhouse_kick.pkl" \
+seed=1 \
++device=cuda:0
 ```
 
+## 2. 评估并导出 ONNX
 
-## License
+```bash
+HYDRA_FULL_ERROR=1 python humanoidverse/eval_agent.py \
++device=cuda:0 \
++headness=True \
++env.config.enforce_randomize_motion_start_eval=False \
++checkpoint="<你的模型路径>.pt"
+```
 
-This codebase is under [CC BY-NC 4.0 license](https://creativecommons.org/licenses/by-nc/4.0/deed.en). You may not use the material for commercial purposes, e.g., to make demos to advertise your commercial products.
+## 3. 采轨迹（MuJoCo）
 
-## Acknowledgements
+```bash
+cd asap_mujoco_sim
+python mujoco_track_with_processing.py
+```
 
-- [ASAP](https://github.com/LeCAR-Lab/ASAP): We use `ASAP` library to build our RL codebase.
-- [RSL_RL](https://github.com/leggedrobotics/rsl_rl): We use `rsl_rl` library for the PPO implementation.
-- [Unitree](https://www.unitree.com/): We use `Unitree G1` as our testbed robot.
-- [Maskedmimic](https://github.com/NVlabs/ProtoMotions): We use the retargeting pipeline in `Maskedmimic`, which based on [Mink](https://github.com/kevinzakka/mink).
-- [PHC](https://github.com/ZhengyiLuo/PHC): We incorporate the retargeting pipeline from `PHC` into our implementation.
-- [GVHMR](https://github.com/zju3dv/GVHMR): We use `GVHMR` to extract motions from videos.
-- [IPMAN](https://github.com/sha2nkt/ipman-r): We filter motions based on `IPMAN` codebase.
-## Contact
+## 4. 残差模型训练（4维脚踝增量）
 
-Feel free to open an issue or discussion if you encounter any problems or have questions about this project.
+```bash
+HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
++simulator=isaacgym \
++exp=motion_tracking \
++domain_rand=NO_domain_rand \
++rewards=motion_tracking/delta_action_rewards \
++robot=g1/g1_23dof_lock_wrist \
++terrain=terrain_locomotion_plane \
++obs=motion_tracking/delta_action_obs \
+++rewards.reward_scales.termination=-100 \
+num_envs=4096 \
+project_name=MotionTracking \
+experiment_name=MotionTracking_CR7 \
+robot.motion.motion_file="<采轨迹生成的pkl路径>" \
+robot.motion.motion_lib_type=origin \
+rewards.reward_penalty_curriculum=False \
+rewards.reward_penalty_degree=0.00001 \
+algo._target_=humanoidverse.agents.delta_a.train_delta_a_ankle_only.PPODeltaAAnkleOnly \
+algo.config.num_steps_per_env=50 \
+algo=ppo_delta_ankle \
+env.config.resample_motion_when_training=True \
+env.config.termination.terminate_when_motion_far=True \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
+env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
+env.config.termination.terminate_by_gravity=True \
+robot.asset.self_collisions=0
+```
 
-For collaborations, feedback, or further inquiries, please reach out to:
+## 5. 微调（残差微调：23维主策略 + 冻结的4维脚踝残差）
 
-- Weiji Xie: [xieweiji249@sjtu.edu.cn](mailto:xieweiji249@sjtu.edu.cn) or Weixin `shisoul`
-- Jinrui Han: [jrhan82@sjtu.edu.cn](mailto:jrhan82@sjtu.edu.cn) or Weixin `Bw_rooneY`
-- Chenjia Bai (Corresponding Author): [baicj@chinatelecom.cn](mailto:baicj@chinatelecom.cn)
-- You can also join our weixin discussion group for timely Q&A. Since the group already exceeds 200 members, you'll need to first add one of the authors on Weixin to receive an invitation to join.
+- `algo.config.policy_checkpoint`：4维脚踝残差模型（作为冻结基线）
+- `checkpoint`：待微调的23维整体策略（加载到当前训练的 actor/critic）
 
+```bash
+HYDRA_FULL_ERROR=1 python humanoidverse/train_agent.py \
++simulator=isaacgym \
++exp=motion_tracking \
++domain_rand=main \
++rewards=motion_tracking/final_training \
++robot=g1/g1_23dof_lock_wrist \
++terrain=terrain_locomotion_plane \
++obs=motion_tracking/final_training \
++algo.config.policy_checkpoint="/home/harry/Desktop/asap-pbhc/logs/MotionTracking/20250901_164732-delta_action_training-motion_tracking-g1_23dof_lock_wrist/model_4000.pt" \
++checkpoint="/home/harry/Desktop/asap-pbhc/logs/MotionTracking/round_sick/model_30000.pt" \
+num_envs=4096 \
+project_name=MotionTracking \
+experiment_name=final_training \
+robot.motion.motion_file=example/motion_data/Roundhouse_kick.pkl \
+rewards.reward_penalty_curriculum=True \
+rewards.reward_penalty_degree=0.00001 \
+algo=mh_ppo \
+algo._target_=humanoidverse.agents.delta_a.train_agent_d_ankle.PPODeltaDAnkle \
+algo.config.save_interval=100 \
+env.config.resample_motion_when_training=False \
+env.config.termination.terminate_when_motion_far=True \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum=True \
+env.config.termination_curriculum.terminate_when_motion_far_threshold_min=0.3 \
+env.config.termination_curriculum.terminate_when_motion_far_curriculum_degree=0.000025 \
+env.config.termination.terminate_by_gravity=True \
+robot.asset.self_collisions=0
+```
 
-We welcome contributions and are happy to support the community in building upon this work!
+### 重要说明
+- 残差微调场景下：训练中的 actor 为 23 维整体策略；`policy_checkpoint` 的 4 维模型仅作为冻结“脚踝残差基线”。
+- 若只想微调 4 维残差，则使用“残差模型训练”命令（不加载 23 维 checkpoint）。
+- Hydra 覆盖：新增键用 `+key=...`，覆盖已存在键用 `key=...` 或 `++key=...`。

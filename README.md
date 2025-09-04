@@ -121,3 +121,18 @@ robot.asset.self_collisions=0
 ```
 
 
+## 7. 部署（Unitree RL Gym）
+
+- 位置：`unitree_rl_gym-main/`
+- 说明：该目录提供部署与运行示例（含英文与中文说明）。详细步骤请阅读：
+  - `unitree_rl_gym-main/README.md`
+  - `unitree_rl_gym-main/README_zh.md`
+
+快速开始（以该目录说明为准）：
+```bash
+cd unitree_rl_gym-main
+pip install -e .
+# 按 README 指引运行部署/演示脚本
+```
+
+

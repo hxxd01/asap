@@ -66,7 +66,27 @@ env.config.termination.terminate_by_gravity=True \
 robot.asset.self_collisions=0
 ```
 
-## 5. 微调（残差微调：23维主策略 + 冻结的4维脚踝残差）
+## 5. 从 TensorBoard 读取 sigma 并回写 YAML（微调前执行）
+
+- 作用：从预训练产生的 TensorBoard 日志中读取自适应 sigma（`adp_sigma_*`），按倍率乘法后写回到 `rewards.reward_tracking_sigma`，用于在微调阶段对齐噪声尺度。
+- 何时运行：完成“预训练（第1步）”后、开始“微调”前运行一次。
+
+示例（将 `--log_dir` 替换为你的预训练日志目录）：
+```bash
+python read_sigma.py \
+  --log_dir /home/harry/Desktop/asap-pbhc/logs/MotionTracking/round_sick \
+  --yaml humanoidverse/config/rewards/motion_tracking/final_training.yaml \
+  --multiplier 2 --no-backup
+```
+参数说明：
+- `--log_dir`：预训练运行生成的 TensorBoard 日志目录（一般位于 `logs/MotionTracking/...`）。
+- `--yaml`：目标 YAML 文件路径；脚本仅会更新其中的 `reward_tracking_sigma` 键。
+- `--multiplier`：对读取到的 sigma 进行倍率缩放（默认 2.0）。
+- `--no-backup`：不生成 `.bak` 备份；若不加该参数，会自动在同目录生成备份。
+
+注意：脚本不会改动其它配置或注释；可重复运行以更新数值。
+
+## 6. 微调（残差微调：23维主策略 + 冻结的4维脚踝残差）
 
 - `algo.config.policy_checkpoint`：4维脚踝残差模型（作为冻结基线）
 - `checkpoint`：待微调的23维整体策略（加载到当前训练的 actor/critic）
@@ -100,7 +120,4 @@ env.config.termination.terminate_by_gravity=True \
 robot.asset.self_collisions=0
 ```
 
-### 重要说明
-- 残差微调场景下：训练中的 actor 为 23 维整体策略；`policy_checkpoint` 的 4 维模型仅作为冻结“脚踝残差基线”。
-- 若只想微调 4 维残差，则使用“残差模型训练”命令（不加载 23 维 checkpoint）。
-- Hydra 覆盖：新增键用 `+key=...`，覆盖已存在键用 `key=...` 或 `++key=...`。
+

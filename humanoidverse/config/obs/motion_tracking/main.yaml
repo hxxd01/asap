@@ -12,9 +12,6 @@ obs:
       dof_vel,
       actions,
       ref_motion_phase,
-      # dif_local_rigid_body_pos,
-      # local_ref_rigid_body_pos,
-      # history,
       history_actor
     ]
 

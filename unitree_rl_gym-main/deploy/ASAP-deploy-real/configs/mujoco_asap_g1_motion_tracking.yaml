@@ -1,0 +1,62 @@
+# ASAP G1 Motion Tracking Configuration
+# 用于ASAP训练的G1机器人运动追踪模型部署配置
+
+# 模型路径 - 您的训练好的JIT模型
+policy_path: "/home/note17/unitree_rl_gym-main/deploy/ASAP-deploy-real/model/mabu29dof.pt"
+
+# 机器人模型路径 - ASAP训练使用的G1 29DOF模型（控制23DOF）
+xml_path: "/home/note17/unitree_rl_gym-main/deploy/ASAP-deploy-real/g1_urdf/mujoco.xml"
+
+# 仿真参数
+simulation_duration: 60.0        # 总仿真时间(秒)
+simulation_dt: 0.005            # 仿真时间步长(秒) - 匹配ASAP训练
+control_decimation: 4           # 控制频率降采样
+
+# 模型参数
+frame_stack: 4                  # 历史帧数
+num_single_obs: 76             # 单帧观测维度
+num_actions: 23                # 动作维度
+cycle_time: 7              # 运动周期时间(秒)
+
+# 观测配置
+use_noise: false               # 部署时关闭噪声
+use_balance_obs: true          # 使用平衡观测而不是零观测
+clip_observations: 100         # 观测值裁剪范围
+clip_actions: 100             # 动作值裁剪范围
+
+# 缩放参数
+action_scale: 0.25
+obs_scale_base_ang_vel: 0.25
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 0.05
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+# G1 23DOF默认关节角度 - 从训练配置中提取
+# 顺序: 左腿(6) + 右腿(6) + 腰部(3) + 左臂(4) + 右臂(4)
+default_angles: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0,    # 左腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+                 -0.1, 0.0, 0.0, 0.3, -0.2, 0.0,    # 右腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+                 0.0, 0.0, 0.0,                       # 腰部: waist_yaw, waist_roll, waist_pitch
+                 0.2, 0.2, 0.0, 0.9,                 # 左臂: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow
+                 0.2, -0.2, 0.0, 0.9]                # 右臂: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow
+init_dof_pos: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0, -0.1, 0.0, 0.0, 0.3, -0.2, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.0, 0.9, 0.2, -0.2, 0.0, 0.9]
+
+
+
+
+# PD控制参数 - 从训练配置中提取
+kps: [100, 100, 100, 200, 20, 20,      # 左腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+      100, 100, 100, 200, 20, 20,      # 右腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+      400, 400, 400,                   # 腰部: waist_yaw, waist_roll, waist_pitch
+      90, 60, 20, 60,                  # 左臂: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow
+      90, 60, 20, 60]                  # 右臂: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow
+
+kds: [2.5, 2.5, 2.5, 5.0, 0.2, 0.1,   # 左腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+      2.5, 2.5, 2.5, 5.0, 0.2, 0.1,   # 右腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+      5.0, 5.0, 5.0,                   # 腰部: waist_yaw, waist_roll, waist_pitch
+      2.0, 1.0, 0.4, 1.0,              # 左臂: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow
+      2.0, 1.0, 0.4, 1.0]              # 右臂: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow
+
+# 运动命令初始值 [前进速度, 侧向速度, 转向速度]
+cmd_init: [0.0, 0.0, 0.0]

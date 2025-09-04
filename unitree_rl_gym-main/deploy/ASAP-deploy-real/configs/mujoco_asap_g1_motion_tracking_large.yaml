@@ -1,0 +1,72 @@
+# ASAP G1 Motion Tracking Configuration - 大窗口版本
+# 适合高分辨率显示器，更大的窗口，更好的视觉体验
+
+# 模型路径 - 您的训练好的JIT模型
+policy_path: "/home/note17/unitree_rl_gym-main/deploy/ASAP-deploy-real/policy_22600.pt"
+
+# 机器人模型路径 - ASAP训练使用的G1 29DOF模型（控制23DOF）
+xml_path: "/home/note17/unitree_rl_gym-main/deploy/ASAP-deploy-real/g1_urdf/g1_29dof_anneal_23dof.xml"
+
+# 仿真参数
+simulation_duration: 60.0        # 总仿真时间(秒)
+simulation_dt: 0.005            # 仿真时间步长(秒) - 匹配ASAP训练
+control_decimation: 4           # 控制频率降采样
+
+# 模型参数
+frame_stack: 4                  # 历史帧数
+num_single_obs: 76             # 单帧观测维度
+num_actions: 23                # 动作维度
+cycle_time: 5.833              # 运动周期时间(秒)
+
+# 观测配置
+use_noise: false               # 部署时关闭噪声
+clip_observations: 100         # 观测值裁剪范围
+clip_actions: 100             # 动作值裁剪范围
+
+# 缩放参数
+action_scale: 0.25
+obs_scale_base_ang_vel: 0.25
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 0.05
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+# G1 23DOF默认关节角度
+default_angles: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0,    # 左腿
+                 -0.1, 0.0, 0.0, 0.3, -0.2, 0.0,    # 右腿
+                 0.0, 0.0, 0.0,                       # 腰部
+                 0.0, 0.0, 0.0, 0.0,                 # 左臂
+                 0.0, 0.0, 0.0, 0.0]                 # 右臂
+
+# PD控制参数
+kps: [100, 100, 100, 200, 20, 20,      # 左腿
+      100, 100, 100, 200, 20, 20,      # 右腿
+      400, 400, 400,                   # 腰部
+      90, 60, 20, 60,                  # 左臂
+      90, 60, 20, 60]                  # 右臂
+
+kds: [2.5, 2.5, 2.5, 5.0, 0.2, 0.1,   # 左腿
+      2.5, 2.5, 2.5, 5.0, 0.2, 0.1,   # 右腿
+      5.0, 5.0, 5.0,                   # 腰部
+      2.0, 1.0, 0.4, 1.0,              # 左臂
+      2.0, 1.0, 0.4, 1.0]              # 右臂
+
+# 运动命令初始值
+cmd_init: [0.0, 0.0, 0.0] 
+
+# 相机设置 - 优化的视角
+camera_settings:
+  distance: 2.8         # 稍微远一点，看到更多场景
+  azimuth: 60          # 稍微偏右，更好的视角
+  elevation: -15        # 稍微平一点的视角
+  lookat: [0.0, 0.0, 0.7]  # 稍微低一点的目标点
+
+# 窗口设置 - 大窗口版本，适合高分辨率显示器
+window_settings:
+  width: 1600          # 更大的窗口宽度
+  height: 1000         # 更大的窗口高度
+  hide_contacts: true   # 隐藏接触点显示
+  hide_forces: true     # 隐藏力显示
+  enable_shadows: true  # 启用阴影
+  enable_reflections: true 

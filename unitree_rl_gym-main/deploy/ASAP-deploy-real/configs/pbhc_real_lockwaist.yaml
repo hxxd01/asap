@@ -1,0 +1,118 @@
+# ASAP G1 21DOF控制真实机器人部署配置 - PBHC动作 (LockWaist训练版本)
+# 基于lockwaist XML训练的PBHC运动模仿模型，支持21DOF控制
+
+# 基础控制参数
+control_dt: 0.02  # 50Hz控制频率，与训练时一致（0.005 * 4 = 0.02）
+
+# 通信配置
+msg_type: "hg"        # G1使用hg消息类型
+imu_type: "pelvis"    # G1的IMU在骨盆上
+
+lowcmd_topic: "rt/lowcmd"
+lowstate_topic: "rt/lowstate"
+
+# 模型路径 - 您的训练好的JIT模型
+policy_path: "/home/note17/unitree_rl_gym-main/deploy/ASAP-deploy-real/model_46900_jit.pt"
+
+# 机器人模型路径 - 使用与训练一致的lockwaist版本
+xml_path: "/home/note17/unitree_rl_gym-main/resources/robots/g1_description/g1_29dof_lock_waist.xml"
+
+# G1 21DOF关节到电机的映射 (lockwaist版本：腿12 + 腰1 + 臂8)
+# 策略控制21DOF，其余关节锁定默认角度
+leg_joint2motor_idx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # 12个腿部关节
+arm_waist_joint2motor_idx: [12,                                # 1个腰部关节 (只有waist_yaw)
+                            15, 16, 17, 18,                     # 4个左臂关节 (肩3+肘1)
+                            22, 23, 24, 25]                     # 4个右臂关节 (肩3+肘1)
+
+# 腿部PD控制参数 (12DOF) - 基于PBHC MuJoCo配置调整
+kps: [100, 100, 100, 150, 40, 40,      # 左腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll (knee=150, ankle=40)
+      100, 100, 100, 150, 40, 40]      # 右腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+
+kds: [2.0, 2.0, 2.0, 4.0, 2.0, 2.0,   # 左腿 (higher damping for stability)
+      2.0, 2.0, 2.0, 4.0, 2.0, 2.0]   # 右腿
+
+# 腿部默认角度 (12DOF) - 与仿真版本一致
+default_angles: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0,    # 左腿
+                 -0.1, 0.0, 0.0, 0.3, -0.2, 0.0]     # 右腿
+
+# 手臂和腰部PD控制参数 (9DOF: 1腰部 + 8手臂) - 基于PBHC MuJoCo配置调整  
+arm_waist_kps: [400,                     # 腰部: 关节12 (只有waist_yaw)
+                100, 100, 50, 50,        # 左臂: 关节15-18 (stronger control for PBHC)
+                100, 100, 50, 50]        # 右臂: 关节22-25 (stronger control for PBHC)
+
+arm_waist_kds: [5.0,                     # 腰部: 关节12
+                2.0, 2.0, 2.0, 2.0,      # 左臂: 关节15-18 (uniform damping)
+                2.0, 2.0, 2.0, 2.0]      # 右臂: 关节22-25 (uniform damping)
+
+# 锁定的腰部关节参数 (waist_roll, waist_pitch固定为0)
+locked_waist_kps: [400, 400]            # 关节13-14 (waist_roll, waist_pitch)
+locked_waist_kds: [5.0, 5.0]            # 关节13-14
+locked_waist_target: [0.0, 0.0]         # 关节13-14锁定在中性位置
+
+# 手腕关节锁定参数 (6DOF) - 不参与策略控制，保持默认角度
+wrist_kps: [20, 20, 20,                 # 左手腕: 关节19-21 (roll, pitch, yaw)
+            20, 20, 20]                  # 右手腕: 关节26-28 (roll, pitch, yaw)
+
+wrist_kds: [1, 1, 1,                    # 左手腕: 关节19-21
+            1, 1, 1]                     # 右手腕: 关节26-28
+
+wrist_target: [0, 0, 0,                 # 左手腕默认角度
+               0, 0, 0]                  # 右手腕默认角度
+
+# 手臂和腰部默认角度 (9DOF) - 策略控制的21DOF中的上身部分
+arm_waist_target: [0,                    # 腰部: 关节12 (waist_yaw)
+                   0.2, 0.2, 0.0, 0.9,   # 左臂: 关节15-18 (shoulder_pitch, shoulder_roll, shoulder_yaw, elbow)
+                   0.2, -0.2, 0.0, 0.9]  # 右臂: 关节22-25 (shoulder_pitch, shoulder_roll, shoulder_yaw, elbow)
+
+# 观测缩放参数 - 与仿真版本一致
+ang_vel_scale: 0.25
+dof_pos_scale: 1.0
+dof_vel_scale: 0.05
+action_scale: 0.25
+cmd_scale: [2.0, 2.0, 0.25]
+
+# ASAP特定参数 - PBHC动作的设置 (lockwaist版本)
+frame_stack: 4                # 历史帧数
+num_single_obs: 74           # 单帧观测维度 (21DOF版本，比23DOF少2维)
+num_actions: 21              # 动作维度 (21DOF控制：腿12 + 腰1 + 臂8)
+num_obs: 372                 # 总观测维度 (74 + 298历史)
+cycle_time: 5.97             # PBHC运动周期时间(秒) - 与MuJoCo配置一致
+
+# ASAP观测缩放参数 - 与仿真版本一致
+obs_scale_base_ang_vel: 0.25
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 0.05
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+# 观测和动作限制 - 与仿真版本一致
+clip_observations: 100
+clip_actions: 100
+use_noise: false             # 真实部署时关闭噪声
+
+# 遥控器命令限制 - 与原始版本一致
+max_cmd: [0.8, 0.5, 1.57]
+
+# 运动命令初始值 [前进速度, 侧向速度, 转向速度]
+cmd_init: [0.0, 0.0, 0.0]
+
+# 安全参数 (可选，用于调试)
+debug_mode: false            # 调试模式
+print_obs: false             # 是否打印观测值
+print_action: false          # 是否打印动作值
+
+# 注释说明
+# 1. PBHC动作21DOF策略控制: 腿部12DOF + 腰部1DOF + 手臂8DOF，其余关节锁定默认角度
+# 2. XML文件使用lockwaist版本，与训练时保持一致
+# 3. 策略网络使用21DOF，匹配lockwaist训练结构
+# 4. waist_roll和waist_pitch关节被锁定在中性位置
+# 5. 运动周期时间调整为5.97秒，与PBHC MuJoCo配置一致
+# 6. 观测维度372 = 当前74维 + 历史298维（4帧×74维）
+# 7. 动作维度21 = 12腿部 + 1腰部 + 8手臂（左臂15-18，右臂22-25）
+# 8. 基于PBHC MuJoCo配置调整了关键参数:
+#    - 腿部: knee KP从200→150, ankle KP从20→40
+#    - 腿部阻尼: 踝关节KD从0.2/0.1→2.0 (大幅提升稳定性)
+#    - 手臂: KP调整为[100,100,50,50] (更强控制)
+#    - 手臂阻尼: KD统一为2.0 (均匀阻尼)
+# 9. 重要：此配置专门适配lockwaist训练的模型，确保训练-部署一致性 

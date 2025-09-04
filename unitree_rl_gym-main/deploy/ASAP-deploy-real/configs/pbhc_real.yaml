@@ -1,0 +1,137 @@
+# ASAP G1 23DOF全身控制真实机器人部署配置 - PBHC动作
+# 基于ASAP训练的PBHC运动模仿模型，支持23DOF全身控制
+
+# 基础控制参数
+control_dt: 0.02  # 50Hz控制频率，与训练时一致（0.005 * 4 = 0.02）
+
+# 通信配置
+msg_type: "hg"        # G1使用hg消息类型
+imu_type: "pelvis"    # G1的IMU在骨盆上
+
+lowcmd_topic: "rt/lowcmd"
+lowstate_topic: "rt/lowstate"
+
+# 模型路径 - 您的训练好的JIT模型
+policy_path: "deploy/ASAP-deploy-real/model8.11/policy_179300.pt"
+
+# 机器人模型路径 - 使用与PBHC训练一致的模型
+xml_path: "deploy/ASAP-deploy-real/g1_urdf/mujoco_pbhc.xml"
+
+# G1 23DOF关节到电机的映射 (PBHC版本 - 语义映射，部署时需要重新分配到真实硬件)
+# 腿12 + 腰3 + 左臂4 + 右臂4 = 23DOF，策略期望的关节顺序（与mujoco_pbhc.xml训练时一致）
+leg_joint2motor_idx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # 12个腿部关节
+arm_waist_joint2motor_idx: [12, 13, 14,                       # 3个腰部关节 (waist_yaw, waist_roll, waist_pitch)
+                            15, 16, 17, 18,                     # 4个左臂关节 (肩3+肘1)
+                            19, 20, 21, 22]                     # 4个右臂关节 (策略期望顺序，部署时映射到真实22-25)
+
+# 腿部PD控制参数 (12DOF) - 基于PBHC MuJoCo配置调整
+kps: [100, 100, 100, 150, 40, 40,      # 左腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll (knee=150, ankle=40)
+      100, 100, 100, 150, 40, 40]      # 右腿: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+
+kds: [2.0, 2.0, 2.0, 4.0, 2.0, 2.0,   # 左腿 (higher damping for stability)
+      2.0, 2.0, 2.0, 4.0, 2.0, 2.0]   # 右腿
+
+# 腿部默认角度 (12DOF) - 与仿真版本一致
+default_angles: [-0.1, 0.0, 0.0, 0.3, -0.2, 0.0,    # 左腿
+                 -0.1, 0.0, 0.0, 0.3, -0.2, 0.0]     # 右腿
+
+# 手臂和腰部PD控制参数 (11DOF) - 基于PBHC MuJoCo配置调整
+arm_waist_kps: [400, 400, 400,          # 腰部: 关节12-14 (waist_yaw, waist_roll, waist_pitch)
+                100, 100, 50, 50,        # 左臂: 关节15-18 (stronger control for PBHC)
+                100, 100, 50, 50]        # 右臂: 策略关节19-22 (部署时映射到真实22-25)
+
+arm_waist_kds: [5.0, 5.0, 5.0,          # 腰部: 关节12-14
+                2.0, 2.0, 2.0, 2.0,      # 左臂: 关节15-18 (uniform damping)
+                2.0, 2.0, 2.0, 2.0]      # 右臂: 策略关节19-22 (部署时映射到真实22-25)
+
+# 注意：PBHC版本无独立手腕关节，手腕质量已合并到elbow_link中
+
+# 手腕关节锁定参数 (6DOF) - PBHC版本真实机器人手腕映射
+# 注意：训练时XML无手腕，但真实G1有手腕需要锁定防止下垂
+# 策略控制15-18(左臂), 22-25(右臂)，手腕关节19-21, 26-28独立锁定
+wrist_kps: [20, 0, 0,                 # 左手腕: 关节19-21 (wrist_roll, wrist_pitch, wrist_yaw)
+            20, 0, 0]                  # 右手腕: 关节26-28 (wrist_roll, wrist_pitch, wrist_yaw)
+
+wrist_kds: [1, 0, 0,                    # 左手腕: 关节19-21
+            1, 0, 0]                     # 右手腕: 关节26-28
+
+wrist_target: [0, 0, 0,                 # 左手腕默认角度
+               0, 0, 0]                  # 右手腕默认角度
+
+# 手臂和腰部默认角度 (11DOF) - 策略控制的23DOF中的上身部分
+arm_waist_target: [0, 0, 0,              # 腰部: 关节12-14 (waist_yaw, waist_roll, waist_pitch)
+                   0.2, 0.2, 0.0, 0.9,    # 左臂: 关节15-18 (shoulder_pitch, shoulder_roll, shoulder_yaw, elbow)
+                   0.2, -0.2, 0.0, 0.9]   # 右臂: 策略关节19-22 (部署时映射到真实22-25)
+
+# 观测缩放参数 - 与仿真版本一致
+ang_vel_scale: 0.25
+dof_pos_scale: 1.0
+dof_vel_scale: 0.05
+action_scale: 0.25
+cmd_scale: [2.0, 2.0, 0.25]
+
+# ASAP特定参数 - PBHC动作的设置
+frame_stack: 4                # 历史帧数
+num_single_obs: 76           # 单帧观测维度
+num_actions: 23              # 动作维度 (23DOF全身控制)
+num_obs: 380                 # 总观测维度 (76 + 304历史)
+cycle_time: 7            # PBHC运动周期时间(秒) - 与MuJoCo配置一致
+#cycle_time: 7.833  李小龙11 查尔斯 20.33 马步 7 
+# ASAP观测缩放参数 - 与仿真版本一致
+obs_scale_base_ang_vel: 0.25
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 0.05
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+# 观测和动作限制 - 与仿真版本一致
+clip_observations: 100
+clip_actions: 100
+use_noise: false             # 真实部署时关闭噪声
+
+# 遥控器命令限制 - 与原始版本一致
+max_cmd: [0.8, 0.5, 1.57]
+
+# 运动命令初始值 [前进速度, 侧向速度, 转向速度]
+cmd_init: [0.0, 0.0, 0.0]
+
+# 安全参数 (可选，用于调试)
+debug_mode: false            # 调试模式
+print_obs: false             # 是否打印观测值
+print_action: false          # 是否打印动作值
+
+# 力矩限制参数 (安全功能)
+use_torque_limit: true       # 是否启用力矩限制
+torque_violation_threshold: 3 # 连续超限次数阈值
+torque_limit: [              # 每个关节的力矩限制 (Nm) - 23DOF (基于URDF effort * 0.8安全系数)
+  # 腿部关节 (12DOF) - hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+  70.4, 70.4, 70.4, 111.2, 40, 40,    # 左腿 (88*0.8, 88*0.8, 88*0.8, 139*0.8, 50*0.8, 50*0.8)
+  70.4, 70.4, 70.4, 111.2, 40, 40,    # 右腿 (88*0.8, 88*0.8, 88*0.8, 139*0.8, 50*0.8, 50*0.8)
+  # 腰部和手臂关节 (11DOF) - waist_yaw, waist_roll, waist_pitch, 左臂4DOF, 右臂4DOF
+  70.4, 40, 40,                        # 腰部 (88*0.8, 50*0.8, 50*0.8)
+  20, 20, 20, 20,                      # 左臂 (25*0.8, 25*0.8, 25*0.8, 25*0.8)
+  20, 20, 20, 20                       # 右臂 (25*0.8, 25*0.8, 25*0.8, 25*0.8)
+]
+use_torque_limit: true
+torque_limit_scale: 2.5
+  # 使用URDF限制的80%
+
+# 注释说明
+# 1. PBHC动作23DOF策略控制: 腿部12DOF + 腰部3DOF + 手臂8DOF，策略不控制手腕
+# 2. XML文件使用mujoco_pbhc.xml，与训练时保持一致
+# 3. 策略网络使用23DOF，匹配训练时的网络结构
+# 4. 手腕质量已合并到elbow_link中，训练时无独立手腕关节
+# 5. **重要**：虽然训练时无手腕，但实机部署时添加手腕锁定控制防止下垂
+# 6. 运动周期时间调整为5.97秒，与PBHC MuJoCo配置一致
+# 7. 观测维度380 = 当前76维 + 历史304维（4帧×76维）
+# 8. 动作维度23 = 12腿部 + 3腰部 + 8手臂（左臂15-18，右臂19-22策略期望→真实22-25）
+# 9. 基于PBHC MuJoCo配置调整了关键参数:
+#    - 腿部: knee KP从200→150, ankle KP从20→40
+#    - 腿部阻尼: 踝关节KD从0.2/0.1→2.0 (大幅提升稳定性)
+#    - 手臂: KP调整为[100,100,50,50] (更强控制)
+#    - 手臂阻尼: KD统一为2.0 (均匀阻尼)
+# 10. **重要**：保持训练时的关节语义（右臂19-22），部署时自动映射到真实22-25避开手腕冲突
+# 11. 手腕关节锁定在默认角度，避免实机手腕下垂问题
+# 12. 关键：策略网络期望训练时的23DOF关节顺序，部署脚本负责重映射到真实硬件
+# 13. 重要：此配置确保PBHC训练-部署的语义一致性，通过智能重映射解决硬件差异
